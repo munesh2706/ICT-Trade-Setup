@@ -1,66 +1,62 @@
-# Project Scope and Guardrails
+# Project Scope and Methodology Guardrails
 
 ## Objective
 
-Develop and validate one ICT-inspired intraday trading model for the underlying Indian indices NIFTY 50, BANKNIFTY, and SENSEX. The system will support market context, setup detection, historical backtesting, and paper trading.
+Build an index-focused ICT analysis and research platform that recognises established ICT concepts and models, generates model-faithful signals, backtests them, and supports paper trading.
+
+## Instruments
+
+- NIFTY 50 index
+- BANKNIFTY index
+- SENSEX index
+
+Individual stocks and index options are on hold.
 
 ## Included
 
-- Index spot and/or index futures market data, with the chosen signal instrument explicitly specified.
-- Higher-timeframe liquidity context.
-- Previous day/week levels and intraday session liquidity references, subject to a finalized level specification.
-- Liquidity sweep, MSS, displacement, and FVG retracement model.
-- Deterministic signal records with reasons and invalidation.
-- Historical event replay, performance reports, and paper-trade ledger.
-- Data-quality gates, audit logs, and reproducible configuration.
+- ICT higher-timeframe analysis and daily/weekly bias context.
+- Liquidity mapping and liquidity-event recognition.
+- Market structure and displacement analysis.
+- ICT PD Arrays and consequent encroachment concepts.
+- Recognition of established ICT trade models and session/time concepts.
+- Signal records with model name, direction, context, evidence, entry logic, invalidation, and target logic.
+- Historical backtesting, paper execution, journaling, and performance reporting.
 
-## Excluded / on hold
+## Excluded
 
-- Individual stock scanning and stock execution.
-- Index options, option-chain analytics, Greeks, premiums, and options execution.
-- Live orders, automated broker order placement, and live capital deployment.
-- Unapproved imports or code reuse from `Nifty50Orderblock`.
+- Creating a proprietary setup and presenting it as standard ICT.
+- Arbitrary indicator-based filters or generic TA rules substituted for ICT definitions.
+- Mixing unrelated ICT model variants without documenting the source and rationale.
+- Individual stock scanning and index options.
+- Live order placement and automated broker execution.
+- Any changes to the separate Nifty50Orderblock repository.
 
-## Initial constraints
+## Source hierarchy
 
-- Timezone: `Asia/Kolkata`.
-- Trading window proposal: 10:00–15:00 IST.
-- Intraday only.
-- Maximum one concurrent paper position across this model initially.
-- Flat at the end of the defined session; no overnight exposure.
-- No trade is preferable to a low-quality or incomplete setup.
+1. **Primary:** Michael J. Huddleston / The Inner Circle Trader's own mentorship lessons, official website, and original teaching material.
+2. **Secondary:** Reputable educational material used only to cross-check terminology or clarify a point—not to override primary ICT teaching.
+3. **Engineering specification:** Exact machine-readable interpretation of a source rule. Every engineering choice not explicitly stated in the source must be labelled as an implementation assumption, not attributed to ICT.
 
-## Market representation decision still required
+If two ICT lessons or model variants differ, preserve both as separately named/versioned variants until the user chooses which one to implement. Do not resolve a conflict by inventing a compromise.
 
-The indices may be represented using index spot candles or exchange-traded index futures candles. This must be decided per index before implementation. The system must not combine levels from one instrument with execution prices from another without an explicit, validated mapping.
+## Important distinction
 
-## Strategy model (provisional)
+ICT is a broad methodology and curriculum containing multiple concepts and trade models, not one single universally fixed entry setup. “Widely accepted ICT rules” therefore means faithfully implementing established definitions and named models, while explicitly identifying which model and teaching/source version is being used.
 
-1. Establish directional/contextual map from higher-timeframe price and liquidity.
-2. Identify a defined buy-side or sell-side liquidity pool.
-3. Require a completed-candle sweep under a precise, codified definition.
-4. Require a confirmed MSS; the swing-point and close-through rules must be specified.
-5. Require displacement under a measurable threshold, not visual judgement alone.
-6. Identify a valid FVG from completed candles.
-7. Wait for price to retrace into the FVG and apply a precisely defined entry trigger.
-8. Define stop, target, timeout, cancellation, and session close rules before a paper trade can be opened.
+## Trading and operating constraints
 
-No step may use future candles. Every event must have an immutable timestamp and reference the candle data that caused it.
+The previously discussed intraday window and paper-only operation are platform operating constraints, not ICT methodology rules. They must remain configurable and must never be represented as rules taught by ICT. The exact market session mapping for Indian indices must be documented separately; do not directly copy New York clock times into IST without deliberate session-time conversion and source rationale.
 
-## Deferred ICT concepts
+## Data and validation
 
-OTE, breaker blocks, mitigation blocks, SMT divergence, Silver Bullet time windows, and additional confluences are deferred. They may be introduced only as separately versioned experiments, not silently mixed into the base model.
-
-## Validation requirements
-
-- Unit tests for every pattern and boundary condition.
-- No-repainting tests using prefix replay.
-- No-look-ahead tests.
-- Missing-bar and conflicting-data fail-closed tests.
-- Walk-forward and out-of-sample evaluation.
-- Sensitivity analysis and realistic transaction-cost modelling.
-- Paper trading before any discussion of live execution.
+- Select and document the price series used for each index (index spot or corresponding futures). Do not mix them silently.
+- Preserve raw data and source provenance.
+- Document exchange calendar, timezone, candle construction, and missing-bar handling.
+- No look-ahead bias, repainting, or future-candle confirmation.
+- Reproduce source rules in tests with annotated examples.
+- Backtest with realistic fees, slippage, and fill assumptions.
+- Use out-of-sample and walk-forward validation; report drawdown and expectancy, not just win rate.
 
 ## Change control
 
-Changes to instrument scope, timeframes, event definitions, risk limits, and execution rules require explicit approval and a documented version change.
+Any departure from a cited ICT teaching, addition of a custom filter, or change to a model's conditions must be explicitly labelled as a deviation/experiment and approved before inclusion in the standard model implementation.
