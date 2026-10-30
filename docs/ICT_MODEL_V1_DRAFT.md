@@ -1,60 +1,83 @@
-# ICT Model V1 — Draft for Review
+# ICT Model Catalogue — Implementation Status
 
-**Status:** Draft. Not approved for coding or live use.
+**Status:** Methodology reference and model catalogue required. This is not a proprietary setup specification.
 
-## Instruments
+## Governing instruction
 
-- NIFTY 50
-- BANKNIFTY
-- SENSEX
+Do not design a new setup. Do not turn one convenient sequence into a supposedly universal ICT strategy. Implement the recognised ICT concepts and named models faithfully to the relevant ICT teaching/source.
 
-Signals are generated on the underlying selected for each index. Options and individual stocks are out of scope.
+The project should support separate ICT models as distinct signal families. A model's conditions must come from its source lesson/material. Do not require every ICT trade to follow one universal sequence such as “sweep → MSS → displacement → FVG”; that sequence may describe a particular model/context, but it is not a universal rule for every ICT model.
 
-## Intended trading hours
+## Core ICT concept families to catalogue
 
-10:00–15:00 IST, intraday only. Exact rules for setup formation cut-off, last entry time, and forced session exit remain to be approved.
+### 1. Market structure and directional context
+- Swing highs and swing lows
+- Break of Structure (BOS)
+- Change in State of Delivery (CISD)
+- Market Structure Shift (MSS), where used in the relevant teaching
+- Higher-timeframe and lower-timeframe structure
+- Daily bias and draw on liquidity
+- Dealing range, equilibrium, premium and discount
 
-## Timeframe roles (proposed)
+### 2. Liquidity
+- Buy-side liquidity (BSL) and sell-side liquidity (SSL)
+- Previous day/week highs and lows
+- Relative equal highs and relative equal lows
+- Old highs/lows and swing liquidity
+- Session highs/lows and opening-range references where relevant
+- Liquidity raid/sweep and liquidity purge concepts
 
-- Daily / 1H: external liquidity, major swing context, prior day/week levels.
-- 15m: dealing range and intraday structure.
-- 5m: liquidity raid, MSS, displacement, FVG formation.
-- 1m: retracement and entry refinement.
+### 3. PD Arrays
+- Fair Value Gap (FVG) and consequent encroachment (CE)
+- Inversion Fair Value Gap (IFVG)
+- Order Block (OB)
+- Breaker Block
+- Mitigation Block
+- Rejection Block
+- Balanced Price Range (BPR)
+- Volume imbalance and other documented opening gaps/arrays
 
-## Base sequence
+### 4. Time and price
+- ICT dealing sessions and Kill Zones
+- Asian range
+- London and New York session concepts
+- Midnight Open and other daily/weekly opening references
+- Judas Swing
+- Power of Three / AMD (Accumulation, Manipulation, Distribution)
+- Macro times, where the selected model uses them
 
-### A. Liquidity map
-Define relevant external and internal liquidity levels. Candidate references include prior day high/low, prior week high/low, confirmed swing highs/lows, and equal highs/lows. Exact lookback and equal-level tolerance are unresolved.
+### 5. Named ICT models
+Catalogue and implement separately when their original rules have been sourced:
+- 2022 ICT Mentorship model
+- Silver Bullet
+- Market Maker models (MMXM)
+- ICT Unicorn model
+- ICT Venom model
+- ICT Judas Swing model
+- Other named models found in the primary curriculum and explicitly selected for this project
 
-### B. Liquidity sweep
-A sweep must be defined mechanically: which liquidity pool is eligible, how far price must trade through it, whether a candle close back inside is required, and how stale levels expire. Until defined, no automated sweep signal is permitted.
+This list is a research catalogue, not a claim that all models are interchangeable or should be active simultaneously.
 
-### C. Market Structure Shift
-MSS must use a confirmed swing point and a completed candle close beyond that swing. Swing length, buffer, and relationship to the sweep are unresolved. Intrabar breaks do not count as confirmed MSS.
+## Required specification for each model
 
-### D. Displacement
-Require a completed impulse candle or sequence with objective body/range/ATR criteria and directional close. Thresholds and volume use are unresolved; visual labels alone are not accepted.
+For every model implemented, record:
+1. Exact model name and source lesson/video/document.
+2. Source date, mentorship year/version, and timestamp/page where possible.
+3. Required market context and directional bias.
+4. Required liquidity references and event sequence.
+5. Required structure confirmation, if any.
+6. Applicable PD Array(s) and their source-faithful definitions.
+7. Time/session restrictions, if the model specifies them.
+8. Entry trigger and permitted entry variants.
+9. Invalidation and stop logic as taught.
+10. Target/draw-on-liquidity logic as taught.
+11. Explicit exclusions, failure conditions, and examples.
+12. Any unresolved ambiguity; do not fill it with an invented rule.
 
-### E. Fair Value Gap
-Use a three-candle imbalance definition with candle indexing and minimum size specified in ticks/points or volatility units. FVG invalidation, partial fills, and expiry require formal definitions.
+## Signal-engine rule
 
-### F. Entry
-Wait for retracement into the qualifying FVG. Entry method (touch, midpoint, rejection close, or lower-timeframe structure confirmation) is unresolved. No assumed fill at a price that was not realistically tradable.
+A signal must identify the exact ICT model and version that generated it. The engine must not output a generic “ICT BUY” or “ICT SELL” when the model identity and qualifying conditions are unknown.
 
-### G. Risk and exits
-Stop placement, buffer, target liquidity, minimum reward:risk, time stop, daily loss limit, and position sizing are all unresolved. No trading implementation until these are specified.
+## Next work
 
-## Required approval questions
-
-1. Signal and execution data source: index spot or index futures for each of NIFTY, BANKNIFTY, and SENSEX?
-2. Should the liquidity sweep require a wick through the level and close back inside, or is a close beyond the level allowed?
-3. Which swing algorithm defines MSS (e.g., 2-left/2-right confirmed fractal, or another exact rule)?
-4. What objective displacement threshold should be tested (ATR multiple, body-to-range, minimum points, or a combination)?
-5. Should FVG entry be first touch, midpoint, or a 1m/3m confirmation after entering the gap?
-6. Where is the stop anchored: sweep extreme, FVG boundary, or a structure point plus buffer?
-7. Target policy: opposing liquidity, fixed R multiple, or partial at one and runner to the other?
-8. What per-trade risk and daily loss cap should be used for paper evaluation?
-
-## Current decision
-
-Only the instrument scope (three indices), index-only focus, ICT base sequence, initial intraday window, and research/paper-only mode are carried forward from the planning discussion. All exact thresholds and risk rules remain unapproved.
+Build a source-backed ICT curriculum/model reference first. Then translate each selected model into testable rules with annotated examples. Only after source definitions are documented should implementation and backtesting begin.
