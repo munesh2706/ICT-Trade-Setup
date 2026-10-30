@@ -1,68 +1,48 @@
 # ICT Trade Setup
 
-ICT-based index analysis, signal generation, historical backtesting, and paper trading for Indian indices.
+**Purpose:** ICT-based index analysis, signal generation, historical backtesting, and paper trading using established concepts and models taught by The Inner Circle Trader (Michael J. Huddleston).
 
-## Scope
+## Core principle
 
-**Active instruments**
-- NIFTY 50
-- BANKNIFTY
-- SENSEX
+This project is **not inventing a new trading setup or a proprietary hybrid strategy**. It will implement and evaluate established ICT concepts and named ICT models using their recognised terminology and rule logic.
 
-**On hold**
-- Individual NIFTY 50 stocks
-- Index options
+Where ICT teachings contain multiple model variants or a rule is not stated consistently across source material, the implementation must document the source/version and preserve the distinction. It must not silently invent a threshold or combine incompatible variants and label the result “standard ICT”.
 
-This repository is independent of the `Nifty50Orderblock` project. Do not import, modify, or couple code from that repository unless explicitly approved.
+## Instruments
 
-## Operating constraints
+- NIFTY 50 index
+- BANKNIFTY index
+- SENSEX index
 
-- India market timezone: Asia/Kolkata (IST).
-- Initial trading window: 10:00–15:00 IST.
-- Intraday only; no overnight positions in the initial model.
-- One active paper position at a time.
-- Research and paper trading only; no live orders or broker order placement.
-- No forced trades: a missing setup is a valid no-trade outcome.
-- Do not silently change locked strategy rules. Record proposed changes and obtain approval.
+Individual stocks and index options are on hold.
 
-## Initial setup model
+## Functional scope
 
-The first model to specify and test is:
+1. ICT market-context and liquidity analysis.
+2. ICT concept and model recognition.
+3. Signal generation with the exact conditions and invalidation logic of the selected ICT model.
+4. Historical backtesting and performance analysis.
+5. Paper trading and trade journaling.
 
-**Liquidity sweep → Market Structure Shift (MSS) → displacement → Fair Value Gap (FVG) retracement → entry confirmation.**
+No live broker orders or automated execution.
 
-Order Blocks may be recorded as contextual confluence, but should not become a mandatory filter until separately defined and tested. Other ICT concepts (OTE, breaker blocks, SMT divergence, etc.) are deferred until the base model has measurable results.
+## Methodology
 
-## Timeframe proposal
+Use ICT learning material as the primary methodology reference, including the official ICT mentorship/core content. Concepts and models are to be implemented as taught, not replaced with generic technical-analysis proxies.
 
-| Timeframe | Role |
-|---|---|
-| Daily / 1H | Higher-timeframe liquidity and context |
-| 15m | Intraday structure and dealing range |
-| 5m | Sweep, MSS, displacement and setup formation |
-| 1m | Entry refinement and paper execution |
+The project reference catalogue is in [docs/ICT_FRAMEWORK_REFERENCE.md](docs/ICT_FRAMEWORK_REFERENCE.md). The implementation scope and source hierarchy are in [docs/PROJECT_SCOPE.md](docs/PROJECT_SCOPE.md).
 
-These are initial design proposals, not yet fully locked parameters. Exact swing definitions, sweep rules, displacement thresholds, session levels, FVG validity, stop placement, targets, expiry, and risk limits must be specified before coding.
+## Engineering principles
 
-## Development phases
+- Separate source-faithful ICT definitions from engineering choices needed to encode them.
+- Record the source, lesson/model, and rule variant for each implemented concept.
+- No look-ahead bias or repainting.
+- Use completed candles wherever the source model requires confirmation.
+- Preserve missing data as missing; do not fabricate candles.
+- Make backtests reproducible and include realistic fees, slippage, and fill assumptions.
+- Report sample size, expectancy, drawdown, trade distribution, and out-of-sample results.
+- A no-trade result is valid; do not force signals.
 
-1. Strategy specification and unambiguous event definitions.
-2. Data contract, exchange calendar, timezone, and candle quality checks.
-3. Deterministic, non-repainting signal engine.
-4. Historical event replay and backtesting with realistic costs and execution assumptions.
-5. Paper trading and forward validation.
-6. Readiness review. Live execution is outside the initial scope.
+## Project boundary
 
-## Safety and integrity
-
-- Never treat an intrabar condition as confirmed until its required candle has closed.
-- Prevent look-ahead bias and repainting.
-- Preserve raw source data and record provenance.
-- Avoid synthetic candles; missing data must remain missing and block affected signals.
-- Backtests must include brokerage, taxes/fees, slippage, and realistic fill assumptions where applicable.
-- Report sample size, expectancy, drawdown, win/loss distribution, and out-of-sample results. Do not optimize only for win rate.
-- No claim of profitability or live readiness without evidence.
-
-## Repository boundaries
-
-This project is `ICT-Trade-Setup`. Keep all files, issues, experiments, and changes for this work inside this repository. The separate `Nifty50Orderblock` repository is frozen and out of scope.
+This repository is independent of Nifty50Orderblock. Do not access or modify that project as part of this work.
