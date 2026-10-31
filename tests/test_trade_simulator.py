@@ -21,6 +21,9 @@ def test_long_stop_exit_calculates_net_pnl():
     assert result.fees == D("2")
     assert result.slippage_cost == D("1.0")
     assert result.net_pnl == D("-23.0")
+    assert result.r_multiple == D("-1")
+    assert result.duration_minutes == 2
+    assert result.as_trade_result().r_multiple == D("-1")
 
 def test_gap_through_stop_uses_worse_open_for_pnl():
     result = process_position_bar(long_position(), candle(1, 85, 90, 80, 88), bar_duration=timedelta(minutes=1))
