@@ -383,9 +383,15 @@ class StockICTScanner:
         statuses: list[StockScanStatus] = []
         ready = 0
         for member in universe.constituents:
-            raw_1m = store.load_verified_candles(member.symbol, "1m")
-            raw_5m = store.load_verified_candles(member.symbol, "5m")
-            raw_15m = store.load_verified_candles(member.symbol, "15m")
+            raw_1m = store.load_verified_candles(
+                member.symbol, "1m", limit=self.config.max_1m_lookback_bars + 375,
+            )
+            raw_5m = store.load_verified_candles(
+                member.symbol, "5m", limit=self.config.max_5m_lookback_bars + 75,
+            )
+            raw_15m = store.load_verified_candles(
+                member.symbol, "15m", limit=self.config.max_15m_context_bars,
+            )
             for timeframe, values in (("1m", raw_1m), ("5m", raw_5m), ("15m", raw_15m)):
                 _validate_candles(values, member.symbol, timeframe)
             one = _completed(raw_1m, as_of, timedelta(minutes=1))[-self.config.max_1m_lookback_bars:]
