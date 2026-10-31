@@ -107,12 +107,13 @@ def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivo
             g for g in gaps
             if g.direction == direction
             and g.first_candle_index >= sweep.candle_index
-            and g.third_candle_index >= mss.candle_index
         ]
         if not eligible_gaps:
             continue
         gap = min(eligible_gaps, key=lambda g: g.third_candle_index)
-        leg_candles = candles[sweep.candle_index:gap.third_candle_index + 1]
+        # Freeze the displacement range at the MSS candle; later price action
+        # must not silently redefine the range used to qualify this setup.
+        leg_candles = candles[sweep.candle_index:mss.candle_index + 1]
         if direction == "bearish":
             range_high = sweep.extreme
             range_low = min(c.low for c in leg_candles)
