@@ -73,6 +73,5 @@ def test_acquired_snapshot_requires_audit_before_backtest_read(tmp_path):
     store.finalize_snapshot("snapshot-a", status="ACQUIRED")
     with pytest.raises(ValueError):
         store.load_candles("NIFTY_SPOT", "1m", "snapshot-a")
-    store.finalize_snapshot("snapshot-a", status="ACQUIRED")
     store.finalize_snapshot("snapshot-a", status="VERIFIED")
     assert len(store.load_candles("NIFTY_SPOT", "1m", "snapshot-a")) == 1
