@@ -193,7 +193,7 @@ def main() -> int:
                 count = tick_count
                 errors = list(stream_errors)
                 quotes = dict(latest_ticks)
-            report_path = write_report(scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, paper_report=paper)
+            report_path = write_report(scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, paper_report=paper, expired_signals=startup_expired)
             print(json.dumps({
                 "as_of": as_of.isoformat(),
                 "refreshed_series_ready": refresh.ready_series,
