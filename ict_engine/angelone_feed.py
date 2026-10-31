@@ -20,6 +20,7 @@ from .models import Candle
 IST = ZoneInfo("Asia/Kolkata")
 MASTER_URL = "https://margincalculator.angelone.in/OpenAPI_File/files/OpenAPIScripMaster.json"
 INTERVALS = {"1m": "ONE_MINUTE", "3m": "THREE_MINUTE", "5m": "FIVE_MINUTE", "10m": "TEN_MINUTE", "15m": "FIFTEEN_MINUTE", "30m": "THIRTY_MINUTE", "1h": "ONE_HOUR", "1d": "ONE_DAY"}
+MAX_REQUEST_DAYS = {"1m": 30, "3m": 60, "5m": 100, "10m": 100, "15m": 200, "30m": 200, "1h": 400, "1d": 2000}
 ROOT = Path(__file__).resolve().parents[1]
 
 class AngelOneFeedError(RuntimeError):
@@ -27,8 +28,8 @@ class AngelOneFeedError(RuntimeError):
 
 class AngelOneHistoricalFeed:
     def __init__(self, client, instruments: dict[str, InstrumentSpec], *, pace_seconds: float):
-        if pace_seconds <= 0:
-            raise ValueError("pace_seconds must be positive")
+        if pace_seconds < (1 / 3):
+            raise ValueError("pace_seconds must respect Angel One historical limit of 3 requests per second")
         self._client = client
         self._instruments = dict(instruments)
         self._pace_seconds = pace_seconds
@@ -80,6 +81,8 @@ class AngelOneHistoricalFeed:
             raise ValueError("unsupported timeframe")
         if start.tzinfo is None or end.tzinfo is None or end <= start:
             raise ValueError("start/end must be timezone-aware and end must be later")
+        if (end - start).total_seconds() > MAX_REQUEST_DAYS[timeframe] * 86400:
+            raise ValueError(f"request exceeds documented {MAX_REQUEST_DAYS[timeframe]}-day limit for {timeframe}; use fetch_range")
         spec = self._instruments[instrument_id]
         wait = self._pace_seconds - (time.monotonic() - self._last_request_at)
         if wait > 0:
@@ -120,3 +123,21 @@ class AngelOneHistoricalFeed:
         if any(c.timestamp < start or c.timestamp >= end for c in candles):
             raise AngelOneFeedError("Historical response contains candles outside the requested interval")
         return candles
+
+    def fetch_range(self, instrument_id: str, timeframe: str, start: datetime, end: datetime) -> list[Candle]:
+        """Fetch a long range in documented interval-specific request windows."""
+        if timeframe not in MAX_REQUEST_DAYS:
+            raise ValueError("unsupported timeframe")
+        if start.tzinfo is None or end.tzinfo is None or end <= start:
+            raise ValueError("start/end must be timezone-aware and end must be later")
+        max_span = timedelta(days=MAX_REQUEST_DAYS[timeframe])
+        cursor = start
+        combined: list[Candle] = []
+        while cursor < end:
+            chunk_end = min(cursor + max_span, end)
+            chunk = self.fetch_candles(instrument_id, timeframe, cursor, chunk_end)
+            if combined and chunk and chunk[0].timestamp <= combined[-1].timestamp:
+                raise AngelOneFeedError("overlapping or non-chronological candle chunks")
+            combined.extend(chunk)
+            cursor = chunk_end
+        return combined
