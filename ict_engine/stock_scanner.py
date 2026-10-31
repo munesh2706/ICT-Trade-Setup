@@ -244,7 +244,7 @@ def _episode6_signal(
         signal = StockSignal(
             signal_id,
             symbol, company_name, candidate.model, candidate.direction,
-            "ENTRY_ARMED" if retest else "QUALIFIED_WAITING_FOR_FVG_RETRACE",
+            "ENTRY_ARMED",
             available_at, lower, upper, candidate.entry_reference,
             candidate.invalidation_references, sweep_name, sweep_price, sweep_extreme,
             recent[candidate.mss.candle_index].timestamp + timedelta(minutes=5),
@@ -256,7 +256,7 @@ def _episode6_signal(
             targets, signal_context,
             candidate.assumptions + (
                 "setup detection uses completed 5m candles only",
-                "1m FVG-zone intersection is a retest alert, not a guaranteed fill",
+                "FVG entry order is armed at formation; 1m zone intersection is reported separately as retest evidence",
                 "entry price and stop variant are not selected by the scanner",
                 "multiple liquidity raids producing the same FVG are consolidated into one signal",
             ),
