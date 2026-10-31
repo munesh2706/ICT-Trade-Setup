@@ -1,6 +1,23 @@
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
-from scripts.backtest_nifty50_ict import _split_trades, _summary
+from scripts.backtest_nifty50_ict import _first_scan_time, _split_trades, _summary
+
+IST = ZoneInfo("Asia/Kolkata")
+
+
+def test_backtest_starts_after_first_completed_15m_context_bar():
+    session = type("Session", (), {
+        "open_at": datetime(2026, 10, 30, 9, 15, tzinfo=IST),
+    })()
+    assert _first_scan_time(session) == datetime(2026, 10, 30, 9, 30, tzinfo=IST)
+
+
+def test_backtest_first_scan_time_respects_session_timezone():
+    session = type("Session", (), {
+        "open_at": datetime(2026, 10, 30, 3, 45, tzinfo=ZoneInfo("UTC")),
+    })()
+    assert _first_scan_time(session) == datetime(2026, 10, 30, 9, 30, tzinfo=IST)
 
 
 def test_backtest_metrics_are_net_of_fees_and_slippage():
