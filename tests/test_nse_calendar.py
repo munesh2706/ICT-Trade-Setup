@@ -9,6 +9,7 @@ def test_bundled_nse_calendar_covers_special_budget_session_and_holidays():
     assert calendar.session_for(date(2026, 2, 1)) is not None
     assert calendar.session_for(date(2026, 1, 15)) is None
     assert calendar.session_for(date(2026, 10, 31)) is None
+    assert calendar.session_for(date(2026, 11, 10)) is not None
     assert len(calendar.expected_candle_starts(date(2026, 2, 1), 1)) == 375
 
 def test_bundled_nse_calendar_fails_closed_beyond_coverage():
