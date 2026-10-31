@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal as D
-from ict_engine.ict_2022_episode6 import fair_value_gaps, confirmed_swings, liquidity_sweeps
+from ict_engine.ict_2022_episode6 import fair_value_gaps, confirmed_swings, liquidity_sweeps, detect_ict_2022_episode6
 from ict_engine.models import Candle, SwingPoint
 
 def c(i, o, h, l, close):
@@ -35,3 +35,30 @@ def test_liquidity_run_does_not_require_same_bar_close_back_inside():
     sweeps = liquidity_sweeps(candles, [swing])
     assert len(sweeps) == 1
     assert sweeps[0].direction == "buy_side"
+
+def test_complete_bearish_episode6_candidate_is_available_only_after_fvg_closes():
+    candles = [
+        c(0, 9, 10, 8, 9),
+        c(1, 10, 11, 9, 10),
+        c(2, 9, 10, 7, 8),
+        c(3, 9, 10.5, 8, 9),
+        c(4, 11, 12, 9, 11),
+        c(5, 10, 11, 8, 9),
+        c(6, 12, 13, 10, 12.5),
+        c(7, 10, 10.5, 5.5, 6),
+        c(8, 6, 9.5, 6, 8.5),
+    ]
+    candidates = detect_ict_2022_episode6(
+        candles, pivot_left=1, pivot_right=1,
+        displacement_min_body_to_range=D("0.5"),
+    )
+    assert len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate.direction == "bearish"
+    assert candidate.sweep.candle_index == 6
+    assert candidate.mss.candle_index == 7
+    assert candidate.fvg.third_candle_index == 8
+    assert candidate.available_at_index == 8
+    assert candidate.displacement_range_high == D("13")
+    assert candidate.displacement_range_low == D("5.5")
+    assert candidate.invalidation_references == (D("13"), D("10.5"))
