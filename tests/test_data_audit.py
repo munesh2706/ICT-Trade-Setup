@@ -50,7 +50,7 @@ def test_daily_interval_uses_one_bar_per_session():
     session = TradingSession("NSE", DAY, OPEN, datetime(2026,1,2,15,30,tzinfo=IST), "official calendar test")
     cal = ExchangeCalendar("NSE", "Asia/Kolkata", DAY, DAY, [session], [], "calendar fixture")
     daily = Candle(OPEN, D("100"), D("102"), D("99"), D("101"), D("0"))
-    audit = audit_candle_grid([daily], calendar=cal, trading_dates=[DAY], interval_minutes=1440)
+    audit = audit_candle_grid([daily], calendar=cal, trading_dates=[DAY], interval_minutes=1440, daily_anchor="session_open")
     assert audit.passed
 
 def test_unverified_snapshot_is_not_backtest_readable(tmp_path):
@@ -68,3 +68,9 @@ def test_wrong_exchange_calendar_rejected_for_index(tmp_path):
     bse_calendar = ExchangeCalendar("BSE", "Asia/Kolkata", DAY, DAY, [bse_session], [], "BSE calendar fixture")
     with pytest.raises(ValueError):
         verify_snapshot(store, "s1", {("NIFTY", "1m"): (bse_calendar, [DAY])})
+
+def test_daily_audit_requires_explicit_timestamp_anchor():
+    session = TradingSession("NSE", DAY, OPEN, datetime(2026,1,2,15,30,tzinfo=IST), "official calendar test")
+    cal = ExchangeCalendar("NSE", "Asia/Kolkata", DAY, DAY, [session], [], "calendar fixture")
+    with pytest.raises(ValueError):
+        audit_candle_grid([], calendar=cal, trading_dates=[DAY], interval_minutes=1440)
