@@ -1,57 +1,73 @@
-# ICT Trade Setup
+# ICT Trade Setup — NIFTY 50 Stocks
 
-**Purpose:** a source-backed ICT research, scanning, visual-analysis and paper-trading platform for the 50 individual NSE cash-equity constituents of NIFTY 50.
+**Purpose:** a source-backed ICT research, signal, paper-trading and visual-monitoring platform for the 50 individual NSE equity constituents of the NIFTY 50.
 
-## Active scope
+## Instrument universe
 
-- Exactly the current 50 NIFTY 50 constituent stocks, from a dated NSE membership snapshot.
-- NSE cash-equity (\`SYMBOL-EQ\`) instruments resolved against the Angel One instrument master.
-- Angel One SmartAPI is the only permitted source for historical and live market prices.
-- Index spot instruments, index options and non-constituent stocks are not scan targets.
-- Paper trading and alerts only. No live order placement, modification or cancellation.
+- Exactly 50 NIFTY 50 constituent stocks, using a dated NSE constituent snapshot.
+- Each symbol is resolved against the Angel One SmartAPI instrument master before data acquisition.
+- Equity tokens, NSE segment and per-stock tick size are sourced from Angel One's master.
+- NIFTY index, BANKNIFTY index, SENSEX, index options and non-constituent stocks are out of scope.
 
-## Delivery priorities
+Membership changes over time. Historical backtests must use membership effective on the historical date, not today's list retroactively.
 
-1. **Stock universe and historical data reliability:** versioned constituent snapshots, exact Angel One token resolution, immutable raw response retention, multi-timeframe gap detection, bounded historical backfill and a strict pre-session verification gate.
-2. **ICT scanner:** source-backed ICT concepts and named models, multi-timeframe context, explainable evidence and non-repainting signal lifecycle.
-3. **Paper trading:** deterministic fills, realistic costs/slippage, risk controls, restart-safe journaling and reproducible backtests.
-4. **Visual dashboard:** universe/data health, stock scanner, setup evidence, invalidation, paper positions, performance and audit trail.
+## Market-data source policy
 
-## Data integrity rules
+Angel One SmartAPI is the sole source for historical candles, live quotes and streaming ticks. NSE's official constituent file and official exchange circulars are used only for constituent membership and trading-session calendars; they are not price-data substitutes.
 
-- No fabricated, interpolated, forward-filled or synthetic OHLCV candles.
-- Missing expected timestamps are detected against an explicit NSE session calendar and repaired by downloading the exact historical ranges from Angel One.
-- Data is not released to the strategy until the full requested grid is verified.
-- Holidays, weekends and special sessions must be represented by an explicit calendar with provenance; the system does not assume all weekdays are normal sessions.
-- A provider response that still omits expected bars after bounded retries keeps the pre-session gate closed.
-- Historical constituent membership is point-in-time only when archived official snapshots exist. The current NSE list must not be projected backwards into historical backtests.
+- Historical candles: Angel One Historical API.
+- Live quotes: Angel One WebSocket V2 and SmartAPI quote API.
+- Instrument identity and tick size: Angel One OpenAPIScripMaster.
+- No other vendor's OHLCV, quotes or adjusted prices may fill gaps.
+- No interpolation, forward-fill, synthetic candles or fabricated historical prices.
+- A derived timeframe is permitted only when every constituent Angel One source candle is present and the aggregation retains source lineage.
 
-## First-stage implementation
+## Pre-session and live data workflow
 
-See [Stock Universe and Historical Reconciliation](docs/STOCK_UNIVERSE_AND_RECONCILIATION.md).
+The system performs a full historical reconciliation before the scanner starts:
 
-Main modules:
-- \`ict_engine/stock_universe.py\` — official NSE constituent snapshot and strict Angel One cash-equity token resolution.
-- \`ict_engine/stock_feed.py\` — read-only Angel One SmartAPI historical feed for the 50 NSE EQ instruments.
-- \`ict_engine/stock_storage.py\` — immutable SQLite candle snapshots and raw response batches.
-- \`ict_engine/stock_reconciliation.py\` — expected-grid gap detection, Angel One backfill and verification gate.
-- \`scripts/reconcile_nifty50_history.py\` — pre-session reconciliation CLI.
+1. Load the dated NIFTY 50 constituent snapshot.
+2. Resolve all 50 NSE EQ instruments and tokens from Angel One's instrument master.
+3. Compare every required stock/timeframe timestamp with the explicit NSE trading calendar.
+4. Identify gaps spanning minutes, hours or multiple trading sessions.
+5. Fetch only missing ranges from Angel One, respecting interval-specific API limits.
+6. Validate timestamp order, duplicates, OHLCV, session boundaries and exact expected-grid coverage.
+7. Release only verified data to the ICT engine.
 
-The required calendar is explicit and source-backed. An illustrative schema (not actual exchange dates) is documented in the stock reconciliation guide. The daily-candle timestamp convention must be explicitly selected when requesting \`1d\`; it is not guessed.
+During the session, completed 1m, 5m and 15m candles are incrementally refreshed from Angel One Historical API. Each stock/timeframe has its own readiness gate. A stock with an unresolved current-session gap is excluded from scanning; other verified stocks may continue. WebSocket ticks are for live quote monitoring and are never used to invent OHLC candles.
 
-## ICT methodology
+The main process is scripts/run_nifty50_session.py. It authenticates once, performs pre-session reconciliation, starts the quote stream, refreshes completed candles, runs the scanner and paper engine, and writes timestamped JSON reports.
 
-ICT learning material remains the methodology source. Source-faithful definitions must be separated from engineering choices. If a lesson contains variants or contradictory guidance, document the source/version and do not silently invent a universal rule. Current model references and detection primitives are being adapted to individual equities after the data layer is complete.
+## ICT model scope
 
-## Engineering constraints
+- ICT 2022 Mentorship Episode 6: liquidity raid → displacement/MSS → in-range FVG candidate.
+- ICT Silver Bullet 2023: New York-local windows with DST-aware conversion and FVG/retest candidate detection.
+- Context includes previous-day/week liquidity, optional explicit equal-high/low clustering, weekly dealing range and directional liquidity objectives.
+- Model variants and engineering assumptions remain labelled. No universal bias is forced.
+- Silver Bullet is currently alert-only in the paper engine; its live entry chronology must be completed before paper fills are enabled.
 
-- No look-ahead bias or repainting.
-- Completed candles for confirmation-based rules.
-- Explicit data provenance, timestamps, source, token and snapshot identity.
-- Backtests only on verified datasets.
-- Report sample size, expectancy, drawdown, fees, slippage and out-of-sample results.
-- No-trade and data-unavailable are valid states; never force a signal.
+The model catalogue and source specifications are in docs/ICT_FRAMEWORK_REFERENCE.md, docs/ICT_2022_EPISODE6_RULE_SPEC.md and docs/ICT_SILVER_BULLET_2023_RULE_SPEC.md.
+
+## Paper trading
+
+Paper trading is broker-free and restart-safe. It uses verified Angel One 1m candles, per-stock tick sizes, explicit entry/stop/target variants, configurable risk limits, and a persistent event journal. Entry bars are excluded from exit processing; same-bar entry/stop/target ambiguity is rejected rather than guessed. No live order placement, modification or cancellation exists in the project.
+
+Before starting, copy config/paper_trading.example.json to config/paper_trading.json and enter the actual starting equity, round-trip fees per share and slippage assumptions. The flat per-share cost input is an explicit approximation, not a live Angel One charge calculator. Local capital/risk configuration is ignored by Git.
+
+## Engineering principles
+
+- No look-ahead, repainting or fabricated market data.
+- Only completed candles are used for confirmed signals and paper execution.
+- Missing data is actively backfilled before the data gate opens.
+- All acquisitions retain immutable snapshots and raw provider responses.
+- Backtests and paper results must identify data snapshots, rule versions, costs and assumptions.
+- A no-trade result is valid; signals are never forced to meet a target count.
+- No profitability claim is made until out-of-sample validation supports it.
+
+## Operating instructions
+
+See docs/PRE_SESSION_RUNBOOK.md and docs/STOCK_DATA_RECONCILIATION.md.
 
 ## Project boundary
 
-This repository is independent of \`Nifty50Orderblock\`. Do not access or modify that separate project as part of this work.
+This repository is independent of Nifty50Orderblock. Do not access or modify that separate project as part of this work.
