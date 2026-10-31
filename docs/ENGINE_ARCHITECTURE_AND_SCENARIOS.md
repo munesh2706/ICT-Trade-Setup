@@ -12,7 +12,8 @@ The platform is split into five independently testable layers:
 No layer may silently repair missing data or change another layer's source rules.
 
 ## Data contract
-- Instrument identity is explicit: NIFTY 50 index, BANKNIFTY index, or SENSEX index.
+- Active instrument identity is an exact NIFTY 50 constituent NSE cash-equity symbol, Angel One NSE EQ token, exchange segment and tick size resolved from the dated universe snapshot and instrument master.
+- Index-only code and validation documents are legacy assets; they are not active inputs to the NIFTY 50 stock scanner.
 - Price series identity is explicit. Spot index and futures are different series and must never be concatenated or silently substituted.
 - All stored timestamps are timezone-aware. Exchange-local presentation uses Asia/Kolkata.
 - Candle intervals are anchored to the documented exchange session calendar, not to the machine's local timezone.
