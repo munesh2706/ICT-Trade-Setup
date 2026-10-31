@@ -2,7 +2,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from ict_engine.market_calendar import ExchangeCalendar, TradingSession
-from ict_engine.stock_selection import _apply_stability, _percentile_scores, rank_and_select_stocks, ranking_cycle_due
+from ict_engine.stock_selection import apply_scan_readiness, _apply_stability, _percentile_scores, rank_and_select_stocks, ranking_cycle_due
 from ict_engine.stock_universe import Constituent, UniverseSnapshot
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -60,6 +60,31 @@ def test_selection_replaces_old_stock_when_challenger_exceeds_margin():
     selected = _apply_stability(ranked, previous, min_score=60, replacement_margin=8, as_of=now)
     assert any(x["symbol"] == "NEW" for x in selected)
     assert not any(x["symbol"] == "OLD" for x in selected)
+
+
+def test_selected_stock_is_removed_immediately_when_scanner_data_gate_fails():
+    from types import SimpleNamespace
+    selection = {
+        "status": "OK",
+        "selected": [
+            {"symbol":"AAA","direction":"bullish","score":85,"selected_since":"2026-10-30T10:00:00+05:30"},
+            {"symbol":"BBB","direction":"bearish","score":80,"selected_since":"2026-10-30T10:00:00+05:30"},
+        ],
+        "ranking": [
+            {"symbol":"AAA","eligible":True,"selected":True},
+            {"symbol":"BBB","eligible":True,"selected":True},
+        ],
+    }
+    statuses = [
+        SimpleNamespace(symbol="AAA", status="READY", reason=""),
+        SimpleNamespace(symbol="BBB", status="DATA_NOT_READY", reason="missing completed 1m candle"),
+    ]
+    updated = apply_scan_readiness(selection, statuses)
+    assert [x["symbol"] for x in updated["selected"]] == ["AAA"]
+    assert updated["status"] == "DEGRADED_DATA_QUALITY"
+    blocked = next(x for x in updated["ranking"] if x["symbol"] == "BBB")
+    assert blocked["eligible"] is False
+    assert "missing completed 1m candle" in blocked["reason"]
 
 
 def test_ranking_cycle_runs_only_on_new_15_minute_boundaries():

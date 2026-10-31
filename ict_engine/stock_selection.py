@@ -362,6 +362,51 @@ def rank_and_select_stocks(
     }
 
 
+
+def apply_scan_readiness(selection: dict[str, Any], stock_status) -> dict[str, Any]:
+    """Immediately remove selected names that fail the scanner's current data gate."""
+    if not selection:
+        return selection
+    by_symbol = {item.symbol: item for item in stock_status}
+    exclusions = []
+    retained = []
+    failed_symbols = set()
+    for item in selection.get("selected", []):
+        status = by_symbol.get(item["symbol"])
+        if status is not None and status.status == "READY":
+            retained.append(item)
+            continue
+        failed_symbols.add(item["symbol"])
+        reason = (
+            f"{status.status}: {status.reason}" if status is not None
+            else "No current scanner readiness record"
+        )
+        exclusions.append({
+            "symbol": item["symbol"], "reason": reason,
+        })
+    updated = dict(selection)
+    updated["selected"] = retained
+    updated["immediate_exclusions"] = exclusions
+    if exclusions:
+        updated["status"] = "DEGRADED_DATA_QUALITY" if retained else "WAITING_FOR_DATA_QUALITY"
+    ranking = []
+    for row in selection.get("ranking", []):
+        item = dict(row)
+        if item.get("symbol") in failed_symbols:
+            status = by_symbol.get(item["symbol"])
+            item["eligible"] = False
+            item["selected"] = False
+            item["selected_direction"] = None
+            item["selected_since"] = None
+            item["reason"] = (
+                f"Scanner gate {status.status}: {status.reason}" if status is not None
+                else "No current scanner readiness record"
+            )
+        ranking.append(item)
+    updated["ranking"] = ranking
+    return updated
+
+
 def ranking_cycle_due(as_of: datetime, last_ranked_at: datetime | None) -> bool:
     """Run on 15-minute wall-clock boundaries; retry each boundary until ranked."""
     if as_of.tzinfo is None or as_of.utcoffset() is None:

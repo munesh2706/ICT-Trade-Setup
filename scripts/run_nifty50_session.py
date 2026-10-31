@@ -28,7 +28,7 @@ from ict_engine.stock_feed import AngelOneStockFeed
 from ict_engine.stock_live_refresh import refresh_current_session
 from ict_engine.stock_reconciliation import reconcile_universe
 from ict_engine.stock_scanner import StockICTScanConfig, StockICTScanner
-from ict_engine.stock_selection import rank_and_select_stocks, ranking_cycle_due
+from ict_engine.stock_selection import apply_scan_readiness, rank_and_select_stocks, ranking_cycle_due
 from ict_engine.paper_store import StockPaperStore
 from ict_engine.paper_trading import StockPaperTradingEngine, load_paper_trading_config
 from ict_engine.stock_storage import StockCandleStore
@@ -275,6 +275,9 @@ def main() -> int:
                     replacement_margin=float(os.getenv("ICT_STOCK_REPLACEMENT_MARGIN", "8")),
                 )
                 last_ranked_at = as_of
+            # Do not wait for the next 15-minute ranking cycle to remove a
+            # selected stock whose current scanner data gate has failed.
+            stock_selection = apply_scan_readiness(stock_selection, scan.stock_status)
             selected_rows = stock_selection.get("selected", [])
             selected_symbols = {row["symbol"] for row in selected_rows}
             selected_directions = {row["symbol"]: row["direction"] for row in selected_rows}
