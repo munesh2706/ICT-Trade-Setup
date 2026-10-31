@@ -85,6 +85,11 @@ def test_selected_stock_is_removed_immediately_when_scanner_data_gate_fails():
     blocked = next(x for x in updated["ranking"] if x["symbol"] == "BBB")
     assert blocked["eligible"] is False
     assert "missing completed 1m candle" in blocked["reason"]
+    recovered = apply_scan_readiness(updated, [
+        SimpleNamespace(symbol="AAA", status="READY", reason=""),
+    ])
+    assert recovered["status"] == "OK"
+    assert [x["symbol"] for x in recovered["selected"]] == ["AAA"]
 
 
 def test_ranking_cycle_runs_only_on_new_15_minute_boundaries():

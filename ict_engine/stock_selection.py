@@ -387,8 +387,12 @@ def apply_scan_readiness(selection: dict[str, Any], stock_status) -> dict[str, A
     updated = dict(selection)
     updated["selected"] = retained
     updated["immediate_exclusions"] = exclusions
+    base_status = selection.get("base_status", selection.get("status", "OK"))
+    updated["base_status"] = base_status
     if exclusions:
         updated["status"] = "DEGRADED_DATA_QUALITY" if retained else "WAITING_FOR_DATA_QUALITY"
+    else:
+        updated["status"] = base_status
     ranking = []
     for row in selection.get("ranking", []):
         item = dict(row)
