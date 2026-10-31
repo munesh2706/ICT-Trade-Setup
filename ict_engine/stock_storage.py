@@ -119,33 +119,44 @@ class StockCandleStore:
                 inserted += 1
         return inserted
 
-    def _load(self, symbol: str, timeframe: str, statuses: tuple[str, ...], start: datetime | None = None,
-              end: datetime | None = None, acquired_universe_id: str | None = None) -> list[Candle]:
+    def _load(self, symbol: str, timeframe: str, statuses: tuple[str, ...],
+              start: datetime | None = None, end: datetime | None = None,
+              acquired_universe_id: str | None = None, limit: int | None = None) -> list[Candle]:
+        if limit is not None and limit < 1:
+            raise ValueError("limit must be positive")
         placeholders = ",".join("?" for _ in statuses)
-        sql = f"""SELECT c.start_utc,c.open,c.high,c.low,c.close,c.volume,s.created_at_utc
-            FROM stock_candles c JOIN stock_snapshots s ON s.snapshot_id=c.snapshot_id
-            WHERE c.symbol=? AND c.timeframe=? AND s.status IN ({placeholders})"""
-        params: list[object] = [symbol, timeframe, *statuses]
         if acquired_universe_id is not None:
-            sql = """SELECT c.start_utc,c.open,c.high,c.low,c.close,c.volume,s.created_at_utc
-                FROM stock_candles c JOIN stock_snapshots s ON s.snapshot_id=c.snapshot_id
-                WHERE c.symbol=? AND c.timeframe=?
+            where = """c.symbol=? AND c.timeframe=?
                 AND (s.status='VERIFIED' OR (s.status='ACQUIRED' AND s.universe_snapshot_id=?))"""
-            params = [symbol, timeframe, acquired_universe_id]
+            params: list[object] = [symbol, timeframe, acquired_universe_id]
+        else:
+            where = f"c.symbol=? AND c.timeframe=? AND s.status IN ({placeholders})"
+            params = [symbol, timeframe, *statuses]
         if start is not None:
-            sql += " AND c.start_utc>=?"
+            where += " AND c.start_utc>=?"
             params.append(_utc(start))
         if end is not None:
-            sql += " AND c.start_utc<?"
+            where += " AND c.start_utc<?"
             params.append(_utc(end))
-        sql += " ORDER BY c.start_utc ASC,s.created_at_utc DESC"
+        sql = f"""SELECT start_utc,open,high,low,close,volume FROM (
+            SELECT c.start_utc,c.open,c.high,c.low,c.close,c.volume,
+                   ROW_NUMBER() OVER (PARTITION BY c.start_utc ORDER BY s.created_at_utc DESC) AS rn
+            FROM stock_candles c JOIN stock_snapshots s ON s.snapshot_id=c.snapshot_id
+            WHERE {where}
+        ) WHERE rn=1 ORDER BY start_utc DESC"""
+        if limit is not None:
+            sql += " LIMIT ?"
+            params.append(limit)
         with self._db() as db:
             rows = db.execute(sql, params).fetchall()
-        chosen = {}
-        for row in rows:
-            chosen.setdefault(row[0], Candle(datetime.fromisoformat(row[0]), Decimal(row[1]), Decimal(row[2]),
-                                              Decimal(row[3]), Decimal(row[4]), Decimal(row[5])))
-        return [chosen[key] for key in sorted(chosen)]
+        rows.reverse()
+        return [Candle(datetime.fromisoformat(r[0]), Decimal(r[1]), Decimal(r[2]),
+                       Decimal(r[3]), Decimal(r[4]), Decimal(r[5])) for r in rows]
+
+    def load_verified_candles(self, symbol: str, timeframe: str,
+                              start: datetime | None = None, end: datetime | None = None,
+                              limit: int | None = None) -> list[Candle]:
+        return self._load(symbol, timeframe, ("VERIFIED",), start, end, limit=limit)
 
     def load_reconciliation_candles(self, symbol: str, timeframe: str,
                                    start: datetime | None = None, end: datetime | None = None,
