@@ -75,6 +75,30 @@ class ExchangeCalendar:
             cursor += step
         return starts
 
+
+    def sessions_between(self, start: date, end: date) -> tuple[TradingSession, ...]:
+        """Return explicitly configured sessions in an inclusive date range.
+
+        Both bounds must be inside calendar coverage. Closed dates are omitted;
+        unknown dates raise through session_for rather than being inferred.
+        """
+        if end < start:
+            raise ValueError("end date must not precede start date")
+        if start < self.coverage_start or end > self.coverage_end:
+            raise CalendarCoverageError("requested range is outside calendar coverage")
+        result = []
+        cursor = start
+        while cursor <= end:
+            session = self.session_for(cursor)
+            if session is not None:
+                result.append(session)
+            cursor += timedelta(days=1)
+        return tuple(result)
+
+    def trading_dates_between(self, start: date, end: date) -> tuple[date, ...]:
+        """Return open-session dates in an inclusive, fully covered range."""
+        return tuple(session.trading_date for session in self.sessions_between(start, end))
+
     def is_open_at(self, timestamp: datetime) -> bool:
         if timestamp.tzinfo is None:
             raise ValueError("timestamp must be timezone-aware")
