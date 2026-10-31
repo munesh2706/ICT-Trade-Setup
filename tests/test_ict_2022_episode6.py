@@ -1,0 +1,30 @@
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal as D
+from ict_engine.ict_2022_episode6 import fair_value_gaps, confirmed_swings
+from ict_engine.models import Candle
+
+def c(i, o, h, l, close):
+    return Candle(datetime(2026, 1, 1, 9, 15, tzinfo=timezone.utc) + timedelta(minutes=i), D(str(o)), D(str(h)), D(str(l)), D(str(close)))
+
+def test_bearish_fvg_uses_first_low_and_third_high():
+    candles = [c(0, 10, 12, 9, 11), c(1, 11, 11, 8, 8.5), c(2, 8, 8.5, 7, 7.5)]
+    gaps = fair_value_gaps(candles)
+    assert len(gaps) == 1
+    assert gaps[0].direction == "bearish"
+    assert gaps[0].lower == D("8.5")
+    assert gaps[0].upper == D("9")
+
+def test_bullish_fvg_uses_first_high_and_third_low():
+    candles = [c(0, 9, 10, 8, 9), c(1, 9, 12, 9, 11), c(2, 11, 13, 10.5, 12)]
+    gaps = fair_value_gaps(candles)
+    assert len(gaps) == 1
+    assert gaps[0].direction == "bullish"
+    assert gaps[0].lower == D("10")
+    assert gaps[0].upper == D("10.5")
+
+def test_swing_is_not_confirmed_until_right_bars_exist():
+    candles = [c(0, 9, 10, 8, 9), c(1, 9, 12, 9, 11), c(2, 11, 11, 9, 10), c(3, 10, 10, 8, 9)]
+    swings = confirmed_swings(candles, left=1, right=1)
+    high = next(s for s in swings if s.kind == "high")
+    assert high.pivot_index == 1
+    assert high.confirmed_at_index == 2
