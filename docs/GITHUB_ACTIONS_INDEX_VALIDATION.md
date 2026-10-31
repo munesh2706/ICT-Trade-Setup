@@ -28,7 +28,7 @@ Use the TOTP base32 secret from the authenticator setup, not the current six-dig
 
 - This workflow runs the existing read-only validation script. It does not place, modify, or cancel orders.
 - It tests instrument-master matching, SmartAPI authentication, historical candles, live quotes, and optionally a short WebSocket probe.
-- A green GitHub Actions job means the script exited successfully; inspect individual report statuses and warnings. The current script can return success even when some individual checks are WARN/FAIL, so do not treat the workflow's green check alone as production approval.
+- The script exits non-zero when any individual check is FAIL. WARN results are non-fatal, so inspect the report and warnings even when the workflow is green. A green run is a validation result for that run, not production approval.
 - GitHub-hosted runners use cloud IP addresses. If Angel One API access is restricted by IP/device policy, authentication or market-data requests may fail even when the secrets are correct.
 - WebSocket packet absence outside market hours is inconclusive.
 - GitHub Actions secrets are not accessible to pull-request workflows from forks; this workflow is manual-dispatch only.
