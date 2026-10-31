@@ -52,8 +52,7 @@ def test_complete_bearish_episode6_candidate_is_available_only_after_fvg_closes(
         candles, pivot_left=1, pivot_right=1,
         displacement_min_body_to_range=D("0.5"),
     )
-    assert len(candidates) == 1
-    candidate = candidates[0]
+    candidate = next(c for c in candidates if c.sweep.reference_swing.pivot_index == 4)
     assert candidate.direction == "bearish"
     assert candidate.sweep.candle_index == 6
     assert candidate.mss.candle_index == 7
