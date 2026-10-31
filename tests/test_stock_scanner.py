@@ -106,3 +106,43 @@ def test_scanner_rejects_non_positive_15m_context_history():
     import pytest
     with pytest.raises(ValueError, match="bar limits must be positive"):
         StockICTScanConfig(max_15m_context_bars=0)
+
+
+def test_scanner_filters_historical_cas_auction_bars_before_ict_detection(monkeypatch):
+    import ict_engine.stock_scanner as scanner_module
+
+    universe, _, data = setup_data()
+    prior_day = date(2026, 10, 29)
+    current_day = date(2026, 10, 30)
+    def make_session(day):
+        return TradingSession(
+            "NSE", day,
+            datetime(day.year, day.month, day.day, 9, 15, tzinfo=IST),
+            datetime(day.year, day.month, day.day, 15, 30, tzinfo=IST),
+            "test NSE session",
+            datetime(day.year, day.month, day.day, 15, 15, tzinfo=IST),
+            "test CAS boundary",
+        )
+    calendar = ExchangeCalendar(
+        "NSE", "Asia/Kolkata", prior_day, current_day,
+        [make_session(prior_day), make_session(current_day)], [],
+        "test CAS calendar",
+    )
+    auction_bar = candle(datetime(2026, 10, 29, 15, 28, tzinfo=IST), 100, 150, 50, 120)
+    data[("SYM00", "1m")].insert(0, auction_bar)
+    seen = {}
+    def capture(symbol, company_name, candles_5m, candles_1m, levels, context,
+                config, scan_date, as_of):
+        if symbol == "SYM00":
+            seen["one_minute"] = list(candles_1m)
+        return []
+    monkeypatch.setattr(scanner_module, "_episode6_signal", capture)
+    StockICTScanner(StockICTScanConfig(
+        enable_silver_bullet=False, pivot_left=1, pivot_right=1,
+    )).scan_universe(
+        universe=universe, store=FakeVerifiedStore(data), calendar=calendar,
+        scan_date=current_day, as_of=datetime(2026, 10, 30, 10, 0, tzinfo=IST),
+        cas_eligible_symbols={member.symbol for member in universe.constituents},
+    )
+    assert "one_minute" in seen
+    assert auction_bar not in seen["one_minute"]
