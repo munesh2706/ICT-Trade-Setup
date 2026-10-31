@@ -52,11 +52,20 @@ def encode(value):
         return [encode(v) for v in value]
     return value
 
-def write_report(report, directory: Path, *, tick_count: int, stream_errors: list[str], paper_report=None):
+def write_report(report, directory: Path, *, tick_count: int, stream_errors: list[str], latest_ticks=None, paper_report=None):
     directory.mkdir(parents=True, exist_ok=True)
     payload = encode(report)
+    quotes = latest_ticks or {}
     payload["live_stream"] = {
         "ticks_received": tick_count,
+        "symbols_with_tick": len(quotes),
+        "quotes": {
+            symbol: {
+                "ltp": str(tick.ltp),
+                "exchange_timestamp": tick.exchange_timestamp.isoformat(),
+                "received_at": tick.received_at.isoformat(),
+            } for symbol, tick in quotes.items()
+        },
         "recent_errors": stream_errors[-10:],
         "source": "Angel One SmartAPI WebSocket V2",
     }
@@ -129,6 +138,7 @@ def main() -> int:
             print("DATA GATE CLOSED: scanner and paper engine will not start.")
             return 2
 
+        now = datetime.now(IST)
         latest_ticks = {}
         stream_errors: list[str] = []
         lock = threading.Lock()
@@ -180,7 +190,8 @@ def main() -> int:
             with lock:
                 count = tick_count
                 errors = list(stream_errors)
-            report_path = write_report(scan, args.reports_dir, tick_count=count, stream_errors=errors, paper_report=paper)
+                quotes = dict(latest_ticks)
+            report_path = write_report(scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, paper_report=paper)
             print(json.dumps({
                 "as_of": as_of.isoformat(),
                 "refreshed_series_ready": refresh.ready_series,
@@ -219,7 +230,8 @@ def main() -> int:
         with lock:
             count = tick_count
             errors = list(stream_errors)
-        report_path = write_report(final_scan, args.reports_dir, tick_count=count, stream_errors=errors, paper_report=final_paper)
+            quotes = dict(latest_ticks)
+        report_path = write_report(final_scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, paper_report=final_paper)
         print(json.dumps({
             "phase": "POST_SESSION",
             "ready_series": final_refresh.ready_series,
