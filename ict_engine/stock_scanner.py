@@ -294,7 +294,8 @@ def _silver_bullet_signals(
     for window in windows:
         # Only windows overlapping this NSE cash session are applicable.
         # Do not shift New York windows to force a match.
-        if window.end <= session.open_at or window.start >= session.close_at:
+        strategy_close = session.continuous_close_at or session.close_at
+        if window.end <= session.open_at or window.start >= strategy_close:
             continue
         for direction, side in (("bullish", "buy_side"), ("bearish", "sell_side")):
             targets = [
@@ -369,6 +370,7 @@ class StockICTScanner:
         calendar: ExchangeCalendar,
         scan_date: date,
         as_of: datetime,
+        cas_eligible_symbols: set[str] | None = None,
     ) -> StockScanReport:
         if as_of.tzinfo is None or as_of.utcoffset() is None:
             raise ValueError("as_of must be timezone-aware")
@@ -384,7 +386,9 @@ class StockICTScanner:
         signals: list[StockSignal] = []
         statuses: list[StockScanStatus] = []
         ready = 0
+        cas_eligible_symbols = set(cas_eligible_symbols or ())
         for member in universe.constituents:
+            cas_eligible = member.symbol in cas_eligible_symbols
             raw_1m = store.load_verified_candles(
                 member.symbol, "1m", end=as_of, limit=self.config.max_1m_lookback_bars + 375,
             )
@@ -394,6 +398,10 @@ class StockICTScanner:
             raw_15m = store.load_verified_candles(
                 member.symbol, "15m", end=as_of, limit=self.config.max_15m_context_bars,
             )
+            if cas_eligible:
+                raw_1m = [c for c in raw_1m if calendar.is_continuous_trading_at(c.timestamp, cas_eligible=True)]
+                raw_5m = [c for c in raw_5m if calendar.is_continuous_trading_at(c.timestamp, cas_eligible=True)]
+                raw_15m = [c for c in raw_15m if calendar.is_continuous_trading_at(c.timestamp, cas_eligible=True)]
             for timeframe, values in (("1m", raw_1m), ("5m", raw_5m), ("15m", raw_15m)):
                 _validate_candles(values, member.symbol, timeframe)
             one = _completed(raw_1m, as_of, timedelta(minutes=1))[-self.config.max_1m_lookback_bars:]
@@ -401,11 +409,11 @@ class StockICTScanner:
             fifteen = _completed(raw_15m, as_of, timedelta(minutes=15))
             latest = one[-1].timestamp if one else None
             expected_by_tf = {
-                "1m": [x for x in calendar.expected_candle_starts(scan_date, 1)
+                "1m": [x for x in calendar.expected_candle_starts(scan_date, 1, cas_eligible=cas_eligible)
                        if x + timedelta(minutes=1) <= as_of.astimezone(calendar.timezone)],
-                "5m": [x for x in calendar.expected_candle_starts(scan_date, 5)
+                "5m": [x for x in calendar.expected_candle_starts(scan_date, 5, cas_eligible=cas_eligible)
                        if x + timedelta(minutes=5) <= as_of.astimezone(calendar.timezone)],
-                "15m": [x for x in calendar.expected_candle_starts(scan_date, 15)
+                "15m": [x for x in calendar.expected_candle_starts(scan_date, 15, cas_eligible=cas_eligible)
                         if x + timedelta(minutes=15) <= as_of.astimezone(calendar.timezone)],
             }
             observed_by_tf = {
