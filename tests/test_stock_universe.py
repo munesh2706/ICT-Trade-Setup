@@ -1,5 +1,6 @@
 from datetime import date
 import pytest
+from decimal import Decimal
 
 from ict_engine.stock_universe import (
     UniverseError, parse_nse_constituent_csv, resolve_angelone_equities,
@@ -27,12 +28,13 @@ def test_angel_master_cash_eq_resolution_does_not_require_instrumenttype_eq():
     snapshot = parse_nse_constituent_csv(make_csv(), captured_on=date(2026, 10, 31))
     master = [
         {"token": str(1000+i), "symbol": f"SYM{i:02d}-EQ", "name": f"SYM{i:02d}",
-         "exch_seg": "nse_cm", "instrumenttype": ""}
+         "exch_seg": "nse_cm", "instrumenttype": "", "tick_size": "5.000000"}
         for i in range(50)
     ]
     result = resolve_angelone_equities(snapshot, master)
     assert len(result) == 50
     assert result["SYM00"].token == "1000"
+    assert result["SYM00"].tick_size == Decimal("0.05")
 
 def test_angel_master_missing_or_ambiguous_token_fails_closed():
     snapshot = parse_nse_constituent_csv(make_csv(), captured_on=date(2026, 10, 31))
