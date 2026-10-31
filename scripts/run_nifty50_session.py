@@ -28,6 +28,8 @@ from ict_engine.stock_feed import AngelOneStockFeed
 from ict_engine.stock_live_refresh import refresh_current_session
 from ict_engine.stock_reconciliation import reconcile_universe
 from ict_engine.stock_scanner import StockICTScanConfig, StockICTScanner
+from ict_engine.paper_store import StockPaperStore
+from ict_engine.paper_trading import StockPaperTradingEngine, load_paper_trading_config
 from ict_engine.stock_storage import StockCandleStore
 from ict_engine.stock_universe import download_nse_universe, save_universe_snapshot
 
@@ -50,7 +52,7 @@ def encode(value):
         return [encode(v) for v in value]
     return value
 
-def write_report(report, directory: Path, *, tick_count: int, stream_errors: list[str]):
+def write_report(report, directory: Path, *, tick_count: int, stream_errors: list[str], paper_report=None):
     directory.mkdir(parents=True, exist_ok=True)
     payload = encode(report)
     payload["live_stream"] = {
@@ -58,6 +60,8 @@ def write_report(report, directory: Path, *, tick_count: int, stream_errors: lis
         "recent_errors": stream_errors[-10:],
         "source": "Angel One SmartAPI WebSocket V2",
     }
+    if paper_report is not None:
+        payload["paper_trading"] = encode(paper_report)
     name = f"stock_scan_{report.scan_date.isoformat()}_{report.as_of.strftime('%H%M%S')}.json"
     path = directory / name
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -72,6 +76,7 @@ def main() -> int:
     parser.add_argument("--database", type=Path, default=ROOT / "data" / "nifty50_stocks.sqlite")
     parser.add_argument("--universe-dir", type=Path, default=ROOT / "data" / "universe")
     parser.add_argument("--reports-dir", type=Path, default=ROOT / "data" / "reports")
+    parser.add_argument("--paper-config", type=Path, default=ROOT / "config" / "paper_trading.json")
     parser.add_argument("--history-timeframes", nargs="+", default=["1m", "5m", "15m"],
                         choices=["1m", "3m", "5m", "10m", "15m", "30m", "1h"])
     parser.add_argument("--pace-seconds", type=float, default=0.4)
@@ -95,6 +100,9 @@ def main() -> int:
         universe = download_nse_universe()
         universe_path = save_universe_snapshot(universe, args.universe_dir)
         feed = AngelOneStockFeed.connect_from_env(universe, pace_seconds=args.pace_seconds)
+        paper_config = load_paper_trading_config(args.paper_config)
+        paper_engine = StockPaperTradingEngine(paper_config, feed.instruments)
+        paper_journal = StockPaperStore(args.database)
         args.database.parent.mkdir(parents=True, exist_ok=True)
         store = StockCandleStore(args.database)
 
@@ -168,16 +176,20 @@ def main() -> int:
                 universe=universe, store=store, calendar=calendar,
                 scan_date=as_of.date(), as_of=as_of,
             )
+            paper = paper_engine.process_scan_report(scan, candles=store, journal=paper_journal)
             with lock:
                 count = tick_count
                 errors = list(stream_errors)
-            report_path = write_report(scan, args.reports_dir, tick_count=count, stream_errors=errors)
+            report_path = write_report(scan, args.reports_dir, tick_count=count, stream_errors=errors, paper_report=paper)
             print(json.dumps({
                 "as_of": as_of.isoformat(),
                 "refreshed_series_ready": refresh.ready_series,
                 "refreshed_series_total": refresh.total_series,
                 "stocks_ready": scan.ready_stocks,
                 "signals": len(scan.signals),
+                "paper_positions_open": paper.open_positions,
+                "paper_positions_opened": paper.positions_opened,
+                "paper_positions_closed": paper.positions_closed,
                 "ticks_received": count,
                 "report": str(report_path),
             }))
@@ -203,16 +215,20 @@ def main() -> int:
             universe=universe, store=store, calendar=calendar,
             scan_date=final_as_of.date(), as_of=final_as_of,
         )
+        final_paper = paper_engine.process_scan_report(final_scan, candles=store, journal=paper_journal)
         with lock:
             count = tick_count
             errors = list(stream_errors)
-        report_path = write_report(final_scan, args.reports_dir, tick_count=count, stream_errors=errors)
+        report_path = write_report(final_scan, args.reports_dir, tick_count=count, stream_errors=errors, paper_report=final_paper)
         print(json.dumps({
             "phase": "POST_SESSION",
             "ready_series": final_refresh.ready_series,
             "total_series": final_refresh.total_series,
             "stocks_ready": final_scan.ready_stocks,
             "signals": len(final_scan.signals),
+            "paper_positions_open": final_paper.open_positions,
+            "paper_positions_opened": final_paper.positions_opened,
+            "paper_positions_closed": final_paper.positions_closed,
             "report": str(report_path),
         }, indent=2))
         feed.stop_stream()
