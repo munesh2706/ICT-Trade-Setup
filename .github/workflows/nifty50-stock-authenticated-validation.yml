@@ -47,7 +47,7 @@ jobs:
       ANGEL_PIN: ${{ secrets.ANGEL_PIN }}
       ANGEL_TOTP_SECRET: ${{ secrets.ANGEL_TOTP_SECRET }}
       VALIDATION_DATE: ${{ github.event.inputs.validation_date || '2026-10-30' }}
-      SOURCE_REF: ${{ github.event.inputs.source_ref || 'eea6c7b2e6ef7ad302092234a8f06191076c3f12' }}
+      SOURCE_REF: ${{ github.event.inputs.source_ref || 'ebd9e5bbfb76fba76d591c9f41065571f27a15a6' }}
       RUN_HISTORICAL: ${{ github.event_name == 'workflow_dispatch' && inputs.run_historical || false }}
       RUN_DIAGNOSTIC: ${{ github.event_name == 'push' || inputs.run_diagnostic }}
 
