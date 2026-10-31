@@ -50,6 +50,11 @@ class StockInstrument:
     exchange: str
     segment: str
     websocket_exchange_type: int = 1
+    tick_size: Decimal | None = None
+
+    def __post_init__(self):
+        if self.tick_size is not None and self.tick_size <= 0:
+            raise UniverseError("instrument tick_size must be positive")
 
 def _field(row: dict[str, Any], *names: str) -> str:
     normalized = {str(k).strip().lower().replace(" ", "").replace("_", ""): v for k, v in row.items()}
@@ -179,6 +184,14 @@ def resolve_angelone_equities(snapshot: UniverseSnapshot, instrument_master: lis
             errors.append(f"{member.symbol}: expected one NSE EQ master row, found {len(matches)}")
             continue
         row = matches[0]
+        try:
+            # Angel One publishes tick_size in paise; normalize to rupees.
+            tick_size = Decimal(str(row.get("tick_size", ""))) / Decimal("100")
+            if not tick_size.is_finite() or tick_size <= 0:
+                raise InvalidOperation
+        except (InvalidOperation, ValueError, TypeError):
+            errors.append(f"{member.symbol}: invalid Angel One tick_size")
+            continue
         result[member.symbol] = StockInstrument(
             symbol=member.symbol,
             company_name=member.company_name,
@@ -187,6 +200,7 @@ def resolve_angelone_equities(snapshot: UniverseSnapshot, instrument_master: lis
             exchange="NSE",
             segment=str(row.get("exch_seg", "NSE")).strip(),
             websocket_exchange_type=1,
+            tick_size=tick_size,
         )
     if errors or len(result) != 50:
         raise UniverseError("Angel One universe resolution failed closed: " + "; ".join(errors))
