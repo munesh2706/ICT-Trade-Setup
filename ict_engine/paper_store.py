@@ -114,7 +114,7 @@ class StockPaperStore:
             if current in TERMINAL or target_status not in ALLOWED.get(current, set()):
                 raise ValueError(f"invalid signal transition: {current.value} -> {target_status.value}")
             previous = db.execute(
-                "SELECT timestamp_utc FROM paper_signal_events WHERE signal_id=? ORDER BY timestamp_utc DESC LIMIT 1",
+                "SELECT timestamp_utc FROM paper_signal_events WHERE signal_id=? ORDER BY timestamp_utc DESC,rowid DESC LIMIT 1",
                 (signal_id,),
             ).fetchone()
             if previous and stamp < previous[0]:
@@ -144,7 +144,7 @@ class StockPaperStore:
     def signal_events(self, signal_id: str) -> list[dict]:
         with self._connect() as db:
             rows = db.execute("""SELECT event_id,timestamp_utc,target_status,reason,evidence_ref,payload_json
-                FROM paper_signal_events WHERE signal_id=? ORDER BY timestamp_utc,event_id""",
+                FROM paper_signal_events WHERE signal_id=? ORDER BY timestamp_utc,rowid""",
                 (signal_id,)).fetchall()
         return [{
             "event_id": r[0], "timestamp": r[1], "status": r[2],
