@@ -7,13 +7,24 @@
 3. Review the NSE calendar coverage. The bundled calendar currently ends on 2026-11-07. Add later sessions only from official NSE holiday/timing circulars before running on a later date.
 4. Choose the earliest historical date required by the ICT models. The selected date must be within the calendar coverage and within the historical data Angel One actually returns.
 
+## Paper-trading configuration
+
+Create a local configuration file and fill in the required values before starting the session runner:
+
+~~~powershell
+Copy-Item config\paper_trading.example.json config\paper_trading.json
+notepad config\paper_trading.json
+~~~
+
+Set starting equity, estimated all-in round-trip fees per share, and slippage per share from your actual Angel One costs and chosen execution assumptions. The engine uses a flat per-share cost input; it is not a live broker charge calculator. Risk fractions, stop reference, entry variant and target selection are explicit engineering settings in this file. Do not treat the defaults as validated profitability parameters.
+
 ## Before each trading session
 
 Run the single-process session runner from the repository root:
 
 ~~~powershell
 $env:ICT_HISTORY_START_DATE = "2026-01-01"
-python scripts\run_nifty50_session.py --calendar data\calendars\nse_2026_through_2026-11-07.json
+python scripts\run_nifty50_session.py --calendar data\calendars\nse_2026_through_2026-11-07.json --paper-config config\paper_trading.json
 ~~~
 
 The runner authenticates once, downloads the current NSE constituent list and Angel One instrument master, performs full historical reconciliation, then starts the WebSocket quote stream and current-session candle refresh. It waits for market open when started pre-market, polls completed 1m candles every minute, 5m candles at 5-minute boundaries and 15m candles at 15-minute boundaries, runs the scanner, and writes JSON reports to data/reports. The first bootstrap may take several minutes because Angel One historical request limits apply. Later sessions request only gaps.
