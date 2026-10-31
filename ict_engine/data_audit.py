@@ -1,7 +1,7 @@
 """Calendar-based data coverage audit and snapshot verification."""
 from __future__ import annotations
 from dataclasses import dataclass
-from datetime import date, time, timezone
+from datetime import date, datetime, time, timezone
 from typing import Mapping, Sequence
 from .market_calendar import ExchangeCalendar
 from .instruments import INDEX_INSTRUMENTS
