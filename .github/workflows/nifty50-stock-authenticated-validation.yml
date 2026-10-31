@@ -74,7 +74,8 @@ jobs:
           echo "All four required secret values are present (values are not displayed)."
 
       - name: Run deterministic stock-platform tests
-        run: python -m pytest -q source/tests
+        working-directory: source
+        run: python -m pytest -q tests
 
       - name: Authenticate and reconcile all 50 stocks for the selected NSE session
         shell: bash
