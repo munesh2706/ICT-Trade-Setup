@@ -2,7 +2,7 @@ name: ICT Engine Tests
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, fix/historical-candle-gap-audit]
   push:
     branches: [main, "feature/ict-2022-model-engine"]
 
