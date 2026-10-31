@@ -6,6 +6,7 @@ on liquidity. It does not manufacture a bias from the FVG itself.
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Literal, Sequence
 
 from .context import LiquidityLevel
@@ -23,8 +24,8 @@ class SilverBulletCandidate:
     fvg: FairValueGap
     fvg_completed_at: datetime
     retest_candle_index: int
-    entry_zone_lower: object
-    entry_zone_upper: object
+    entry_zone_lower: Decimal
+    entry_zone_upper: Decimal
     draw_on_liquidity: LiquidityLevel
     source_id: str
     assumptions: tuple[str, ...]
