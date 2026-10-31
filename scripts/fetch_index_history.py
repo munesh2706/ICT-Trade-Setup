@@ -5,6 +5,7 @@ Run from the repository root. This script never places broker orders.
 from __future__ import annotations
 import argparse
 import json
+from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -34,7 +35,7 @@ def main() -> int:
     args = parser.parse_args()
     if args.end <= args.start:
         parser.error("--end must be later than --start")
-    snapshot_id = args.snapshot_id or datetime.now(ZoneInfo("UTC")).strftime("angel_%Y%m%dT%H%M%SZ")
+    snapshot_id = args.snapshot_id or (datetime.now(ZoneInfo("UTC")).strftime("angel_%Y%m%dT%H%M%SZ") + "_" + uuid4().hex[:8])
     args.database.parent.mkdir(parents=True, exist_ok=True)
     store = CandleStore(args.database)
     store.create_snapshot(snapshot_id, description=f"Angel One {args.timeframe} {args.start.isoformat()} to {args.end.isoformat()}")
