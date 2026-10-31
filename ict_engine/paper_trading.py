@@ -302,7 +302,7 @@ class StockPaperTradingEngine:
 
 
     def expire_pending_signals(self, journal: StockPaperStore, session_close) -> int:
-        """Expire unfilled intraday candidates at the exchange session close."""
+        """Expire unfilled intraday candidates at the strategy's continuous-session close."""
         expired = 0
         for pending in journal.pending_signals():
             if pending["created_at"] > session_close:
@@ -310,7 +310,7 @@ class StockPaperTradingEngine:
             event_id = f'{pending["signal_id"]}:expired-session:{session_close.date().isoformat()}'
             if journal.append_event(
                 event_id, pending["signal_id"], session_close, SignalStatus.EXPIRED,
-                "Unfilled ICT setup expired at the end of its exchange session",
+                "Unfilled ICT setup expired at the end of its continuous-trading session",
                 evidence_ref="session_close",
             ):
                 expired += 1
