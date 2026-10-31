@@ -5,6 +5,7 @@ import json
 import os
 import re
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
@@ -73,6 +74,14 @@ def state_payload() -> dict:
             "direction": position.direction, "entry_time": position.entry_time.isoformat(),
             "entry_price": str(position.entry_price), "stop": str(position.stop),
             "target": str(position.target), "quantity": str(position.quantity),
+            "ltp": quotes.get(position.instrument_id, {}).get("ltp"),
+            "quote_received_at": quotes.get(position.instrument_id, {}).get("received_at"),
+            "unrealized_gross_pnl": (
+                str((Decimal(quotes[position.instrument_id]["ltp"]) - position.entry_price) * position.quantity
+                    if position.direction == "long" else
+                    (position.entry_price - Decimal(quotes[position.instrument_id]["ltp"])) * position.quantity)
+                if position.instrument_id in quotes else None
+            ),
         })
     return {
         "status": "OK", "as_of": report.get("as_of"), "scan_date": report.get("scan_date"),
