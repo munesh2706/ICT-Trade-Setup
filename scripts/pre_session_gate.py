@@ -13,6 +13,10 @@ from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from scripts.reconcile_nifty50_history import load_calendar, main as reconcile_main
 
 IST = ZoneInfo("Asia/Kolkata")
