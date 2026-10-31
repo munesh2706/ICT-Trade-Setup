@@ -11,7 +11,7 @@ on:
       source_ref:
         description: "Feature branch or commit containing the stock platform"
         required: true
-        default: "ebd9e5bbfb76fba76d591c9f41065571f27a15a6"
+        default: "e518f8ff5456a0dc8f794cb3965a9fbb4329e1a4"
         type: string
       run_historical:
         description: "Run the full 50-stock historical candle reconciliation (takes several minutes)"
@@ -47,7 +47,7 @@ jobs:
       ANGEL_PIN: ${{ secrets.ANGEL_PIN }}
       ANGEL_TOTP_SECRET: ${{ secrets.ANGEL_TOTP_SECRET }}
       VALIDATION_DATE: ${{ github.event.inputs.validation_date || '2026-10-30' }}
-      SOURCE_REF: ${{ github.event.inputs.source_ref || 'ebd9e5bbfb76fba76d591c9f41065571f27a15a6' }}
+      SOURCE_REF: ${{ github.event.inputs.source_ref || 'e518f8ff5456a0dc8f794cb3965a9fbb4329e1a4' }}
       RUN_HISTORICAL: ${{ github.event_name == 'workflow_dispatch' && inputs.run_historical || false }}
       RUN_DIAGNOSTIC: ${{ github.event_name == 'push' || inputs.run_diagnostic }}
 
