@@ -182,16 +182,23 @@ def main() -> int:
                 "report": str(report_path),
             }))
             if args.once:
-                break
+                feed.stop_stream()
+                return 0 if scan.ready_stocks == 50 else 2
             next_minute = as_of.replace(second=0, microsecond=0) + timedelta(minutes=1)
             time.sleep(max(0.0, (next_minute - datetime.now(IST)).total_seconds()))
 
         # Bounded post-close reconciliation for final completed session bars.
         final_as_of = session.close_at.astimezone(IST)
-        final_refresh = refresh_current_session(
-            universe=universe, feed=feed, store=store, calendar=calendar,
-            as_of=final_as_of, timeframes=args.history_timeframes,
-        )
+        final_refresh = None
+        for attempt in range(3):
+            final_refresh = refresh_current_session(
+                universe=universe, feed=feed, store=store, calendar=calendar,
+                as_of=final_as_of, timeframes=args.history_timeframes,
+            )
+            if final_refresh.ready_series == final_refresh.total_series:
+                break
+            if attempt < 2:
+                time.sleep(5)
         final_scan = scanner.scan_universe(
             universe=universe, store=store, calendar=calendar,
             scan_date=final_as_of.date(), as_of=final_as_of,
