@@ -83,6 +83,8 @@ class CandleStore:
     def store_raw_batch(self, snapshot_id: str, batch_no: int, instrument_id: str, timeframe: str,
                         fetched_at: datetime, request_params: dict, payload: dict) -> None:
         """Persist the successful/failed provider response without auth material."""
+        if batch_no < 0:
+            raise ValueError("batch_no must be non-negative")
         allowed_params = {"exchange", "symboltoken", "interval", "fromdate", "todate"}
         if set(request_params) - allowed_params:
             raise ValueError("raw request metadata contains an unapproved field")
