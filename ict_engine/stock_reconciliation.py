@@ -35,16 +35,19 @@ class ReconciliationResult:
     def total_missing(self) -> int:
         return sum(len(x.missing_after) for x in self.series)
 
-def _expected(calendar: ExchangeCalendar, dates: Sequence[date], timeframe: str) -> list[datetime]:
+def _expected(calendar: ExchangeCalendar, dates: Sequence[date], timeframe: str, daily_anchor: str | None = None) -> list[datetime]:
     if timeframe not in INTERVAL_MINUTES:
         raise ValueError(f"unsupported timeframe {timeframe}")
     minutes = INTERVAL_MINUTES[timeframe]
     result = []
     for day in dates:
         if minutes == 1440:
+            if daily_anchor not in {"session_open", "local_midnight"}:
+                raise ValueError("daily timeframe requires an explicit daily_anchor")
             session = calendar.session_for(day)
             if session:
-                result.append(session.open_at.astimezone(calendar.timezone))
+                stamp = session.open_at if daily_anchor == "session_open" else datetime.combine(day, datetime.min.time(), calendar.timezone)
+                result.append(stamp.astimezone(calendar.timezone))
         else:
             result.extend(calendar.expected_candle_starts(day, minutes))
     return result
@@ -84,6 +87,7 @@ def reconcile_universe(
     trading_dates: Sequence[date],
     timeframes: Sequence[str],
     max_passes: int = 2,
+    daily_anchor: str | None = None,
 ) -> ReconciliationResult:
     """Backfill all expected missing timestamps before releasing data to strategy.
 
@@ -94,6 +98,8 @@ def reconcile_universe(
     """
     if not trading_dates:
         raise ValueError("trading_dates cannot be empty")
+    if any(trading_dates[i] >= trading_dates[i + 1] for i in range(len(trading_dates) - 1)):
+        raise ValueError("trading_dates must be strictly increasing and unique")
     if calendar.exchange != "NSE":
         raise ValueError("NIFTY 50 stocks require the NSE trading calendar")
     if max_passes < 1 or max_passes > 5:
@@ -116,9 +122,13 @@ def reconcile_universe(
             for member in universe.constituents:
                 symbol = member.symbol
                 key = (symbol, timeframe)
-                expected = _expected(calendar, trading_dates, timeframe)
+                expected = _expected(calendar, trading_dates, timeframe, daily_anchor)
+                if not expected:
+                    raise ValueError(f"calendar produced no expected bars for {symbol}/{timeframe}")
                 expected_by_series[key] = expected
-                existing = store.load_reconciliation_candles(symbol, timeframe)
+                range_start = expected[0]
+                range_end = expected[-1] + timedelta(minutes=INTERVAL_MINUTES[timeframe])
+                existing = store.load_reconciliation_candles(symbol, timeframe, range_start, range_end)
                 present = {c.timestamp.astimezone(IST) for c in existing}
                 missing = [x for x in expected if x not in present]
                 before_counts[key] = len(expected) - len(missing)
@@ -133,11 +143,19 @@ def reconcile_universe(
                             end = chunk[-1] + timedelta(minutes=INTERVAL_MINUTES[timeframe])
                             # API bounds are widened to minute precision; returned
                             # rows are filtered to the exact expected grid below.
+                            raw_count_before = len(feed.raw_responses)
                             try:
                                 candles = feed.fetch_candles(symbol, timeframe, start, end)
                             except Exception:
-                                # Preserve already fetched ranges; final audit records
-                                # the unresolved expected timestamps without fabricating.
+                                # Persist provider error payloads when the SDK returned one.
+                                if len(feed.raw_responses) > raw_count_before:
+                                    raw = feed.raw_responses[-1]
+                                    store.store_raw(
+                                        snapshot_id, batch_no, symbol, timeframe,
+                                        feed.instruments[symbol].token, raw["fetched_at"],
+                                        raw["request_params"], raw["payload"],
+                                    )
+                                    batch_no += 1
                                 continue
                             raw = feed.raw_responses[-1]
                             store.store_raw(
@@ -155,7 +173,7 @@ def reconcile_universe(
                                     feed.instruments[symbol].token, exact,
                                 )
                                 fetched_counts[key] += inserted
-                    current = store.load_reconciliation_candles(symbol, timeframe)
+                    current = store.load_reconciliation_candles(symbol, timeframe, range_start, range_end)
                     present = {c.timestamp.astimezone(IST) for c in current}
                     missing = [x for x in expected if x not in present]
 
@@ -172,7 +190,9 @@ def reconcile_universe(
     all_passed = True
     for key, expected in expected_by_series.items():
         symbol, timeframe = key
-        candles = store.load_reconciliation_candles(symbol, timeframe)
+        range_start = expected[0]
+        range_end = expected[-1] + timedelta(minutes=INTERVAL_MINUTES[timeframe])
+        candles = store.load_reconciliation_candles(symbol, timeframe, range_start, range_end)
         present = {c.timestamp.astimezone(IST) for c in candles}
         missing = tuple(sorted(x.isoformat() for x in expected if x not in present))
         unexpected = tuple(sorted(c.timestamp.isoformat() for c in candles if c.timestamp.astimezone(IST) not in set(expected)))
