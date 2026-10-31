@@ -127,6 +127,13 @@ class StockPaperStore:
                        (target_status.value, stamp, signal_id))
         return True
 
+    def pending_signals(self) -> list[dict]:
+        with self._connect() as db:
+            rows = db.execute("""SELECT signal_id,status,created_at_utc FROM paper_signals
+                WHERE status IN (?,?,?) ORDER BY created_at_utc""",
+                (SignalStatus.WATCHING.value, SignalStatus.QUALIFIED.value, SignalStatus.ENTRY_ARMED.value)).fetchall()
+        return [{"signal_id": r[0], "status": r[1], "created_at": datetime.fromisoformat(r[2])} for r in rows]
+
     def signal_created_at(self, signal_id: str) -> datetime:
         with self._connect() as db:
             row = db.execute("SELECT created_at_utc FROM paper_signals WHERE signal_id=?", (signal_id,)).fetchone()
