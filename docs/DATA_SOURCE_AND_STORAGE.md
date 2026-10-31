@@ -38,7 +38,7 @@ These limits are provider API constraints, not guarantees that every requested c
 
 ## Immutable dataset snapshots
 
-`CandleStore` stores each dataset under an explicit `snapshot_id`. The same timestamp can exist in multiple snapshots if a provider later revises historical data. A conflicting row inside the same snapshot is rejected, not overwritten. Backtests must identify the snapshot they used.
+`CandleStore` stores each dataset under an explicit `snapshot_id`. The same timestamp can exist in multiple snapshots if a provider later revises historical data. A conflicting row inside the same snapshot is rejected, not overwritten. Snapshots move through OPEN → ACQUIRED → VERIFIED, or to FAILED. Backtest reads are blocked until VERIFIED. Verification requires an explicit exchange calendar and a complete expected candle grid. Backtests must identify the snapshot they used.
 
 ## Exchange calendar
 
@@ -50,7 +50,8 @@ Production use requires separately curated official NSE and BSE calendars for ev
 
 - `ict_engine/instruments.py`: strict index-only instrument registry.
 - `ict_engine/angelone_feed.py`: read-only Angel One historical adapter; no order/position endpoints.
-- `ict_engine/storage.py`: immutable SQLite snapshots.
+- `ict_engine/storage.py`: immutable SQLite snapshots with acquisition and verification states.
+- `ict_engine/data_audit.py`: exchange-calendar expected-grid audit; promotes a snapshot to VERIFIED only when all required series pass.
 - `ict_engine/market_calendar.py`: explicit session calendar and expected candle grid.
 
 ## Remaining data-layer work
