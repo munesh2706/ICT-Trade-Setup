@@ -9,7 +9,8 @@ def test_bundled_nse_calendar_covers_special_budget_session_and_holidays():
     assert calendar.session_for(date(2026, 2, 1)) is not None
     assert calendar.session_for(date(2026, 1, 15)) is None
     assert calendar.session_for(date(2026, 10, 31)) is None
-    assert calendar.session_for(date(2026, 11, 10)) is not None
+    assert calendar.session_for(date(2026, 11, 2)) is not None
+    assert calendar.session_for(date(2026, 11, 7)) is None
     assert len(calendar.expected_candle_starts(date(2026, 2, 1), 1)) == 375
 
 def test_bundled_nse_calendar_fails_closed_beyond_coverage():
@@ -18,4 +19,4 @@ def test_bundled_nse_calendar_fails_closed_beyond_coverage():
     import pytest
     from ict_engine.market_calendar import CalendarCoverageError
     with pytest.raises(CalendarCoverageError):
-        calendar.session_for(date(2026, 11, 2))
+        calendar.session_for(date(2026, 11, 10))
