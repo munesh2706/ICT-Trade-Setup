@@ -56,11 +56,13 @@ It shows constituent readiness and candle counts, live quote age, explainable IC
 
 The model catalogue and source specifications are in docs/ICT_FRAMEWORK_REFERENCE.md, docs/ICT_2022_EPISODE6_RULE_SPEC.md and docs/ICT_SILVER_BULLET_2023_RULE_SPEC.md.
 
-## Paper trading
+## Paper trading and historical replay
 
 Paper trading is broker-free and restart-safe. It uses verified Angel One 1m candles, per-stock tick sizes, explicit entry/stop/target variants, configurable risk limits, and a persistent event journal. Entry bars are excluded from exit processing; same-bar entry/stop/target ambiguity is rejected rather than guessed. No live order placement, modification or cancellation exists in the project.
 
-Before starting, copy config/paper_trading.example.json to config/paper_trading.json and enter the actual starting equity, round-trip fees per share and slippage assumptions. The flat per-share cost input is an explicit approximation, not a live Angel One charge calculator. Local capital/risk configuration is ignored by Git.
+The historical replay CLI is scripts/backtest_nifty50_ict.py. It reconciles Angel One history before replay, runs one-minute event-driven scans and reports in-sample/out-of-sample metrics. It refuses to apply a current constituent snapshot to older dates unless the user explicitly opts into survivorship bias. See docs/BACKTEST_RUNBOOK.md.
+
+Before starting either runner, copy config/paper_trading.example.json to config/paper_trading.json and enter the actual starting equity, round-trip fees per share and slippage assumptions. The flat per-share cost input is an explicit approximation, not a live Angel One charge calculator. Local capital/risk configuration is ignored by Git.
 
 ## Engineering principles
 
@@ -74,7 +76,7 @@ Before starting, copy config/paper_trading.example.json to config/paper_trading.
 
 ## Operating instructions
 
-See docs/PRE_SESSION_RUNBOOK.md and docs/STOCK_DATA_RECONCILIATION.md.
+See docs/PRE_SESSION_RUNBOOK.md, docs/STOCK_DATA_RECONCILIATION.md and docs/BACKTEST_RUNBOOK.md.
 
 ## Project boundary
 
