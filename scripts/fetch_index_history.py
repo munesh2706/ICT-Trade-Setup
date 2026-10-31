@@ -39,16 +39,28 @@ def main() -> int:
     store = CandleStore(args.database)
     store.create_snapshot(snapshot_id, description=f"Angel One {args.timeframe} {args.start.isoformat()} to {args.end.isoformat()}")
     counts = {}
+    feed = None
+    raw_index = 0
     try:
         feed = AngelOneHistoricalFeed.connect_from_env(pace_seconds=args.pace_seconds)
         for instrument_id in args.instruments:
             candles = feed.fetch_range(instrument_id, args.timeframe, args.start, args.end)
+            for raw in feed.raw_responses[raw_index:]:
+                store.store_raw_batch(snapshot_id, raw_index, raw["instrument_id"], raw["timeframe"], raw["fetched_at"], raw["request_params"], raw["payload"])
+                raw_index += 1
             if not candles:
                 raise RuntimeError(f"No candles returned for {instrument_id}; snapshot will not be marked ACQUIRED")
             counts[instrument_id] = len(candles)
             store.store_candles(instrument_id, args.timeframe, snapshot_id, "ANGEL_HISTORICAL", candles)
         store.finalize_snapshot(snapshot_id, status="ACQUIRED")
     except Exception as exc:
+        try:
+            if feed is not None:
+                for raw in feed.raw_responses[raw_index:]:
+                    store.store_raw_batch(snapshot_id, raw_index, raw["instrument_id"], raw["timeframe"], raw["fetched_at"], raw["request_params"], raw["payload"])
+                    raw_index += 1
+        except Exception:
+            pass
         try:
             if store.snapshot_status(snapshot_id) == "OPEN":
                 store.finalize_snapshot(snapshot_id, status="FAILED", description=f"FAILED: {type(exc).__name__}")
