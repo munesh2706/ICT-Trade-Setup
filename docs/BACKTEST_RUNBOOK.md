@@ -29,6 +29,8 @@ python scripts\backtest_nifty50_ict.py --start 2026-10-01 --end 2026-10-30 --cal
 
 The survivorship-bias opt-in is deliberate. Do not present that run as a point-in-time NIFTY 50 backtest.
 
+For an in-sample/out-of-sample split, a trade opened before the cutoff and exited on/after it is excluded from both split metric sets and counted separately. This avoids using a post-cutoff outcome in in-sample performance.
+
 The script:
 1. Loads a dated constituent snapshot and resolves all 50 instruments through Angel One.
 2. Reconciles warm-up plus requested history from Angel One Historical API.
