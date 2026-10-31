@@ -32,6 +32,10 @@ class DailyRiskState:
     trades_today: int = 0
     consecutive_losses: int = 0
 
+    def __post_init__(self):
+        if self.open_positions < 0 or self.trades_today < 0 or self.consecutive_losses < 0:
+            raise ValueError("risk state counters cannot be negative")
+
     def evaluate_entry(self, limits: RiskLimits, proposed_risk: Decimal) -> RiskDecision:
         reasons = []
         if self.realized_pnl <= -limits.max_daily_loss:
