@@ -71,7 +71,7 @@ function renderSignals(d){
 }
 function renderPositions(d){
  const open=d.open_positions||[];
- $("positions").innerHTML=open.map(p=>'<tr><td><strong>'+esc(p.symbol)+'</strong><div class="muted">'+esc(p.model_id)+'</div></td><td>'+esc(p.direction)+'</td><td>'+fmt(p.entry_price)+'</td><td>'+fmt(p.ltp)+'</td><td class="'+(Number(p.unrealized_gross_pnl)>=0?"good":"bad")+'">'+fmt(p.unrealized_gross_pnl)+'</td><td>'+fmt(p.stop)+'</td><td>'+fmt(p.target)+'</td><td>'+fmt(p.quantity,0)+'</td></tr>').join("")||'<tr><td colspan="6" class="empty">No open positions.</td></tr>';
+ $("positions").innerHTML=open.map(p=>'<tr><td><strong>'+esc(p.symbol)+'</strong><div class="muted">'+esc(p.model_id)+'</div></td><td>'+esc(p.direction)+'</td><td>'+fmt(p.entry_price)+'</td><td>'+fmt(p.ltp)+'</td><td class="'+(Number(p.unrealized_gross_pnl)>=0?"good":"bad")+'">'+fmt(p.unrealized_gross_pnl)+'</td><td>'+fmt(p.stop)+'</td><td>'+fmt(p.target)+'</td><td>'+fmt(p.quantity,0)+'</td></tr>').join("")||'<tr><td colspan="8" class="empty">No open positions.</td></tr>';
  const closed=(d.closed_trades||[]).slice(-30).reverse();
  $("closed").innerHTML=closed.map(p=>'<tr><td>'+esc(p.symbol)+'</td><td>'+esc(p.direction)+'</td><td class="'+(Number(p.net_pnl)>=0?"good":"bad")+'">'+fmt(p.net_pnl)+'</td><td>'+fmt(p.r_multiple)+'</td><td>'+esc(p.exit_reason)+'</td></tr>').join("")||'<tr><td colspan="5" class="empty">No closed trades.</td></tr>';
 }
