@@ -247,17 +247,44 @@ class StockPaperStore:
                        (stamp, position_id))
 
     def load_daily_risk(self, risk_date: date, starting_equity: Decimal) -> DailyRiskState:
+        """Reconstruct daily counters from the immutable paper-position journal.
+
+        This makes a restart between position creation and risk-state persistence
+        recoverable instead of trusting a possibly stale counter row.
+        """
+        day = risk_date.isoformat()
         with self._connect() as db:
-            row = db.execute("""SELECT realized_pnl,open_positions,trades_today,consecutive_losses
-                FROM paper_daily_risk WHERE risk_date=?""", (risk_date.isoformat(),)).fetchone()
-            if row is None:
-                open_count = db.execute("SELECT COUNT(*) FROM paper_positions WHERE status='OPEN'").fetchone()[0]
-                db.execute("""INSERT INTO paper_daily_risk
-                    (risk_date,equity,realized_pnl,open_positions,trades_today,consecutive_losses,updated_at_utc)
-                    VALUES (?,?,?,?,?,?,?)""",
-                    (risk_date.isoformat(), str(starting_equity), "0", open_count, 0, 0, datetime.now(timezone.utc).isoformat()))
-                return DailyRiskState(risk_date, Decimal("0"), open_count, 0, 0)
-            return DailyRiskState(risk_date, Decimal(row[0]), row[1], row[2], row[3])
+            open_count = db.execute(
+                "SELECT COUNT(*) FROM paper_positions WHERE status='OPEN'"
+            ).fetchone()[0]
+            trades_today = db.execute(
+                "SELECT COUNT(*) FROM paper_positions WHERE substr(entry_time_utc,1,10)=?",
+                (day,),
+            ).fetchone()[0]
+            pnl_rows = db.execute(
+                """SELECT net_pnl FROM paper_positions
+                   WHERE status='CLOSED' AND substr(exit_time_utc,1,10)=?
+                   ORDER BY exit_time_utc""",
+                (day,),
+            ).fetchall()
+            realized = sum((Decimal(row[0] or "0") for row in pnl_rows), Decimal("0"))
+            consecutive = 0
+            for (value,) in reversed(pnl_rows):
+                pnl = Decimal(value or "0")
+                if pnl < 0:
+                    consecutive += 1
+                else:
+                    break
+            db.execute("""INSERT INTO paper_daily_risk
+                (risk_date,equity,realized_pnl,open_positions,trades_today,consecutive_losses,updated_at_utc)
+                VALUES (?,?,?,?,?,?,?)
+                ON CONFLICT(risk_date) DO UPDATE SET
+                    equity=excluded.equity,realized_pnl=excluded.realized_pnl,
+                    open_positions=excluded.open_positions,trades_today=excluded.trades_today,
+                    consecutive_losses=excluded.consecutive_losses,updated_at_utc=excluded.updated_at_utc""",
+                (day, str(starting_equity), str(realized), open_count, trades_today,
+                 consecutive, datetime.now(timezone.utc).isoformat()))
+        return DailyRiskState(risk_date, realized, open_count, trades_today, consecutive)
 
     def save_daily_risk(self, risk_date: date, equity: Decimal, state: DailyRiskState):
         if state.risk_date != risk_date:
