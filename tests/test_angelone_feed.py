@@ -68,3 +68,32 @@ def test_single_request_over_documented_limit_rejected():
 def test_historical_rate_pacing_cannot_exceed_documented_limit():
     with pytest.raises(ValueError):
         AngelOneHistoricalFeed(FakeClient({"status": True, "data": []}), INDEX_INSTRUMENTS, pace_seconds=0.2)
+
+class FakeMasterResponse:
+    def __init__(self, rows):
+        self._rows = rows
+    def raise_for_status(self):
+        return None
+    def json(self):
+        return self._rows
+
+
+def test_instrument_master_verifies_all_three_indices(monkeypatch):
+    import ict_engine.angelone_feed as module
+    rows = [
+        {"token": "99926000", "exch_seg": "NSE", "instrumenttype": "AMXIDX", "name": "NIFTY", "symbol": "Nifty 50"},
+        {"token": "99926009", "exch_seg": "NSE", "instrumenttype": "AMXIDX", "name": "BANKNIFTY", "symbol": "Nifty Bank"},
+        {"token": "99919000", "exch_seg": "BSE", "instrumenttype": "AMXIDX", "name": "SENSEX", "symbol": "SENSEX"},
+    ]
+    monkeypatch.setattr(module.requests, "get", lambda *args, **kwargs: FakeMasterResponse(rows))
+    feed({"status": True, "data": []})._verify_instrument_master()
+
+
+def test_instrument_master_rejects_wrong_exchange_or_duplicate_token(monkeypatch):
+    import ict_engine.angelone_feed as module
+    rows = [
+        {"token": "99926000", "exch_seg": "BSE", "instrumenttype": "AMXIDX", "name": "NIFTY", "symbol": "Nifty 50"},
+    ]
+    monkeypatch.setattr(module.requests, "get", lambda *args, **kwargs: FakeMasterResponse(rows))
+    with pytest.raises(AngelOneFeedError):
+        feed({"status": True, "data": []})._verify_instrument_master()
