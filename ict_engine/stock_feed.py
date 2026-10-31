@@ -16,7 +16,8 @@ from dotenv import load_dotenv
 from .models import Candle
 from .stock_universe import (
     ANGEL_MASTER_URL, HEADERS, StockInstrument, UniverseSnapshot,
-    UniverseError, download_angelone_master, resolve_angelone_equities,\n    resolve_angelone_cas_eligible_symbols,
+    UniverseError, download_angelone_master, resolve_angelone_equities,
+    resolve_angelone_cas_eligible_symbols,
 )
 
 IST = ZoneInfo("Asia/Kolkata")
