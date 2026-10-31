@@ -294,10 +294,16 @@ def main():
         end = datetime.combine(session_day, dtime(15, 30)).strftime("%Y-%m-%d %H:%M")
         candle_store = {}
         hist = {}
+        historical_request_count = 0
         for key, inst in instruments.items():
             hist[key] = {}
             for interval, mins in INTERVALS.items():
                 try:
+                    # Official documented ceiling is 3 historical requests/second.
+                    # Use a conservative pace below that ceiling.
+                    if historical_request_count:
+                        time.sleep(0.4)
+                    historical_request_count += 1
                     payload = api.getCandleData({
                         "exchange": inst["exchange"], "symboltoken": inst["token"],
                         "interval": interval, "fromdate": start, "todate": end,
