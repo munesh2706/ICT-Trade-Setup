@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import timedelta
 from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
+import json
+from pathlib import Path
 
 from .paper_execution import calculate_position_size
 from .risk_controls import DailyRiskState, RiskLimits
@@ -47,6 +49,8 @@ class PaperTradingConfig:
             raise ValueError("risk_per_trade_fraction must be in (0,1]")
         if not ZERO < self.max_daily_loss_fraction <= ONE:
             raise ValueError("max_daily_loss_fraction must be in (0,1]")
+        if self.max_daily_loss_fraction < self.risk_per_trade_fraction:
+            raise ValueError("max_daily_loss_fraction cannot be smaller than risk_per_trade_fraction")
         if min(self.max_open_positions, self.max_trades_per_day,
                self.max_consecutive_losses, self.max_entry_wait_minutes) < 1:
             raise ValueError("risk limits and entry wait must be positive")
@@ -71,6 +75,33 @@ class PaperEngineReport:
     open_positions: int
     realized_pnl_today: Decimal
     actions: tuple[dict, ...]
+
+
+def load_paper_trading_config(path: str | Path) -> PaperTradingConfig:
+    """Load explicit paper settings; required equity/cost inputs cannot be guessed."""
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+        required = ("starting_equity", "round_trip_fees_per_share", "round_trip_slippage_points")
+        missing = [key for key in required if payload.get(key) is None]
+        if missing:
+            raise ValueError("paper config must explicitly set: " + ", ".join(missing))
+        return PaperTradingConfig(
+            starting_equity=Decimal(str(payload["starting_equity"])),
+            round_trip_fees_per_share=Decimal(str(payload["round_trip_fees_per_share"])),
+            round_trip_slippage_points=Decimal(str(payload["round_trip_slippage_points"])),
+            risk_per_trade_fraction=Decimal(str(payload.get("risk_per_trade_fraction", "0.005"))),
+            max_daily_loss_fraction=Decimal(str(payload.get("max_daily_loss_fraction", "0.02"))),
+            max_open_positions=int(payload.get("max_open_positions", 3)),
+            max_trades_per_day=int(payload.get("max_trades_per_day", 5)),
+            max_consecutive_losses=int(payload.get("max_consecutive_losses", 3)),
+            entry_variant=str(payload.get("entry_variant", "detector_reference")),
+            stop_reference_index=int(payload.get("stop_reference_index", 0)),
+            target_selection=str(payload.get("target_selection", "nearest")),
+            max_entry_wait_minutes=int(payload.get("max_entry_wait_minutes", 90)),
+            quantity_step=Decimal(str(payload.get("quantity_step", "1"))),
+        )
+    except Exception as exc:
+        raise ValueError(f"invalid paper trading configuration: {type(exc).__name__}: {exc}") from None
 
 def _quantize(price: Decimal, tick: Decimal, rounding) -> Decimal:
     if tick <= ZERO:
