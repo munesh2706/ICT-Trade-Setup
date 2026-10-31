@@ -56,3 +56,6 @@ def test_out_of_order_risk_rollover_rejected():
 def test_cannot_close_without_open_position():
     with pytest.raises(ValueError):
         DailyRiskState(date(2026,1,1)).record_close(D("10"))
+def test_negative_risk_state_counters_rejected():
+    with pytest.raises(ValueError):
+        DailyRiskState(date(2026,1,1), open_positions=-1)
