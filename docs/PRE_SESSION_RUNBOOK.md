@@ -60,3 +60,14 @@ Use local_midnight instead only if verified against the provider's actual daily 
 The individual `refresh_nifty50_live_session.py` and `scan_nifty50_stocks.py` commands are available for one-shot diagnostics. The normal live workflow is the long-running `run_nifty50_session.py` process above; do not launch a new Python process and re-authenticate for every minute.
 
 A stock is eligible for scanning only when its completed current-session 1m, 5m and 15m grids are present in verified storage. The WebSocket V2 feed is for live quote display/monitoring; it is not used to synthesize OHLCV. The scanner returns per-stock readiness and explainable ICT candidates. The current CLI emits JSON; the visual dashboard remains a subsequent milestone.
+
+
+## Visual dashboard
+
+Start the dashboard in a second PowerShell window after installing the updated requirements:
+
+~~~powershell
+python -m uvicorn dashboard.app:app --host 127.0.0.1 --port 8000
+~~~
+
+Open http://127.0.0.1:8000 in the browser. Keep it bound to 127.0.0.1; the dashboard has no remote-user authentication and is intended for local use only. It reads the latest session report and verified candle/paper-trade SQLite database. It does not connect to a second market-data vendor or place broker orders.
