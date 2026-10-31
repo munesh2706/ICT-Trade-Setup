@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
@@ -54,9 +54,12 @@ class StockPaperStore:
                 exit_time_utc TEXT, exit_price TEXT, exit_reason TEXT,
                 gross_pnl TEXT, fees TEXT, slippage_cost TEXT, net_pnl TEXT,
                 ambiguous_bar INTEGER, gap_through_stop INTEGER, r_multiple TEXT,
-                duration_minutes INTEGER,
+                duration_minutes INTEGER, last_processed_bar_utc TEXT,
                 FOREIGN KEY(signal_id) REFERENCES paper_signals(signal_id)
             )""")
+            columns = {row[1] for row in db.execute("PRAGMA table_info(paper_positions)").fetchall()}
+            if "last_processed_bar_utc" not in columns:
+                db.execute("ALTER TABLE paper_positions ADD COLUMN last_processed_bar_utc TEXT")
             db.execute("""CREATE TABLE IF NOT EXISTS paper_daily_risk (
                 risk_date TEXT PRIMARY KEY, equity TEXT NOT NULL, realized_pnl TEXT NOT NULL,
                 open_positions INTEGER NOT NULL, trades_today INTEGER NOT NULL,
