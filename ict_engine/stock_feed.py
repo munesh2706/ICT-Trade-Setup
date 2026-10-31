@@ -67,7 +67,7 @@ class QuoteBatch:
         return not self.missing_symbols and not self.stale_symbols and not self.unfetched_tokens and not self.errors
 
 class AngelOneStockFeed:
-    def __init__(self, client, instruments: dict[str, StockInstrument], *, pace_seconds: float = 1.0, master_sha256: str = "", auth_token: str | None = None, feed_token: str | None = None, api_key: str | None = None, client_code: str | None = None):
+    def __init__(self, client, instruments: dict[str, StockInstrument], *, pace_seconds: float = 1.0, master_sha256: str = "", auth_token: str | None = None, feed_token: str | None = None, api_key: str | None = None, client_code: str | None = None, cas_eligible_symbols: set[str] | None = None):
         if pace_seconds < (1 / 3):
             raise ValueError("pace_seconds must be at least 1/3 second (Angel One historical API limit)")
         if len(instruments) != 50:
@@ -76,6 +76,7 @@ class AngelOneStockFeed:
         self.instruments = dict(instruments)
         self.pace_seconds = pace_seconds
         self.master_sha256 = master_sha256
+        self.cas_eligible_symbols = set(cas_eligible_symbols or ()) & set(instruments)
         self._auth_token = auth_token
         self._feed_token = feed_token
         self._api_key = api_key
@@ -113,12 +114,21 @@ class AngelOneStockFeed:
         try:
             master, digest = download_angelone_master()
             instruments = resolve_angelone_equities(universe, master)
+            universe_symbols = {member.symbol for member in universe.constituents}
+            cas_eligible_symbols = {
+                str(row.get("name", "")).strip().upper()
+                for row in master
+                if str(row.get("exch_seg", "")).strip().upper() == "NFO"
+                and str(row.get("instrumenttype", "")).strip().upper() == "FUTSTK"
+                and str(row.get("name", "")).strip().upper() in universe_symbols
+            }
         except UniverseError as exc:
             raise StockFeedError(str(exc)) from None
         return cls(
             client, instruments, pace_seconds=pace_seconds, master_sha256=digest,
             auth_token=auth_token, feed_token=feed_token,
             api_key=os.environ["ANGEL_API_KEY"], client_code=os.environ["ANGEL_CLIENT_CODE"],
+            cas_eligible_symbols=cas_eligible_symbols,
         )
 
     def fetch_candles(self, symbol: str, timeframe: str, start: datetime, end: datetime) -> list[Candle]:
