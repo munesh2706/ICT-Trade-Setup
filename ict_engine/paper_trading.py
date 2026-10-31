@@ -12,6 +12,7 @@ from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
 import json
 from pathlib import Path
 
+from .market_calendar import ExchangeCalendar
 from .paper_execution import calculate_position_size
 from .risk_controls import DailyRiskState, RiskLimits
 from .signal_lifecycle import SignalStatus
@@ -178,7 +179,9 @@ class StockPaperTradingEngine:
         return entry, stop, target
 
     def _process_open_positions(self, report: StockScanReport, candles: StockCandleStore,
-                                journal: StockPaperStore, risk: DailyRiskState) -> int:
+                                journal: StockPaperStore, risk: DailyRiskState, *,
+                                calendar: ExchangeCalendar | None = None,
+                                cas_eligible_symbols: set[str] | None = None) -> int:
         closed = 0
         for position in journal.load_open_positions():
             last = journal.last_processed_bar(position.position_id)
@@ -186,6 +189,9 @@ class StockPaperTradingEngine:
                 position.instrument_id, "1m", start=last, end=report.as_of,
             )
             for bar in bars:
+                if calendar is not None and position.instrument_id in (cas_eligible_symbols or set()):
+                    if not calendar.is_continuous_trading_at(bar.timestamp, cas_eligible=True):
+                        continue
                 if bar.timestamp <= last or bar.timestamp + timedelta(minutes=1) > report.as_of:
                     continue
                 exit_ = process_position_bar(position, bar, bar_duration=timedelta(minutes=1))
@@ -200,7 +206,9 @@ class StockPaperTradingEngine:
 
     def _try_entry(self, signal: StockSignal, report: StockScanReport,
                    candles: StockCandleStore, journal: StockPaperStore,
-                   risk: DailyRiskState, limits: RiskLimits) -> str:
+                   risk: DailyRiskState, limits: RiskLimits, *,
+                   calendar: ExchangeCalendar | None = None,
+                   cas_eligible_symbols: set[str] | None = None) -> str:
         if "SILVER_BULLET" in signal.model_id.upper():
             self._event(journal, signal, SignalStatus.NO_TRADE, report,
                         "Silver Bullet entry chronology is alert-only; no retroactive fill is permitted",
@@ -226,6 +234,9 @@ class StockPaperTradingEngine:
 
         bars = candles.load_verified_candles(signal.symbol, "1m", start=scan_start, end=report.as_of)
         for bar in bars:
+            if calendar is not None and signal.symbol in (cas_eligible_symbols or set()):
+                if not calendar.is_continuous_trading_at(bar.timestamp, cas_eligible=True):
+                    continue
             if bar.timestamp < scan_start or bar.timestamp + timedelta(minutes=1) > report.as_of:
                 continue
             long_side = signal.direction == "bullish"
@@ -307,10 +318,16 @@ class StockPaperTradingEngine:
 
     def process_scan_report(self, report: StockScanReport, *,
                             candles: StockCandleStore,
-                            journal: StockPaperStore) -> PaperEngineReport:
+                            journal: StockPaperStore,
+                            calendar: ExchangeCalendar | None = None,
+                            cas_eligible_symbols: set[str] | None = None) -> PaperEngineReport:
+        cas_eligible_symbols = set(cas_eligible_symbols or ())
         risk = journal.load_daily_risk(report.scan_date, self.config.starting_equity)
         limits = self._limits()
-        closed = self._process_open_positions(report, candles, journal, risk)
+        closed = self._process_open_positions(
+            report, candles, journal, risk, calendar=calendar,
+            cas_eligible_symbols=cas_eligible_symbols,
+        )
         registered = opened = rejected = no_trade = 0
         actions = []
         for signal in report.signals:
@@ -328,7 +345,10 @@ class StockPaperTradingEngine:
                 continue
             if journal.has_position_for_signal(signal.signal_id):
                 continue
-            action = self._try_entry(signal, report, candles, journal, risk, limits)
+            action = self._try_entry(
+                signal, report, candles, journal, risk, limits,
+                calendar=calendar, cas_eligible_symbols=cas_eligible_symbols,
+            )
             actions.append({"signal_id": signal.signal_id, "symbol": signal.symbol, "action": action})
             if action == "opened":
                 opened += 1
