@@ -1,0 +1,15 @@
+{
+  "starting_equity": null,
+  "round_trip_fees_per_share": null,
+  "round_trip_slippage_points": null,
+  "risk_per_trade_fraction": "0.005",
+  "max_daily_loss_fraction": "0.02",
+  "max_open_positions": 3,
+  "max_trades_per_day": 5,
+  "max_consecutive_losses": 3,
+  "entry_variant": "detector_reference",
+  "stop_reference_index": 0,
+  "target_selection": "nearest",
+  "max_entry_wait_minutes": 90,
+  "quantity_step": "1"
+}
