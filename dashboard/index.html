@@ -30,7 +30,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;colo
 <section class="stats">
 <div class="stat"><div class="label">Stocks ready</div><div class="value" id="ready">—</div></div>
 <div class="stat"><div class="label">ICT signals</div><div class="value" id="signalCount">—</div></div>
-<div class="stat"><div class="label">Live quotes</div><div class="value" id="quoteCount">—</div></div>
+<div class="stat"><div class="label">Fresh quotes</div><div class="value" id="quoteCount">—</div></div>
 <div class="stat"><div class="label">Open paper trades</div><div class="value" id="openCount">—</div></div>
 <div class="stat"><div class="label">Closed today</div><div class="value" id="closedCount">—</div></div>
 <div class="stat"><div class="label">Paper realised P&L</div><div class="value" id="pnl">—</div></div>
@@ -56,11 +56,11 @@ const fmt=(v,d=2)=>{if(v===null||v===undefined||v==="")return "—";const n=Numb
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function pill(label,cls=""){return '<span class="pill '+cls+'">'+esc(label)+'</span>'}
 async function get(url){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error(await r.text());return r.json()}
-function renderStats(d){const o=d.overview||{};$("ready").textContent=(o.ready_stocks??0)+"/"+(o.total_stocks??50);$("signalCount").textContent=o.signals??0;$("quoteCount").textContent=o.live_ticks??0;$("openCount").textContent=o.open_positions??0;$("closedCount").textContent=o.paper_trades_closed??0;$("pnl").textContent=fmt(o.paper_realized_pnl);$("pnl").className="value "+(Number(o.paper_realized_pnl)>=0?"good":"bad");$("asof").textContent=d.as_of?"Last scan "+new Date(d.as_of).toLocaleTimeString():"No scan time";$("connection").textContent=d.status==="OK"?"Session report connected":"Waiting for session report"}
+function renderStats(d){const o=d.overview||{};$("ready").textContent=(o.ready_stocks??0)+"/"+(o.total_stocks??50);$("signalCount").textContent=o.signals??0;$("quoteCount").textContent=(d.stocks||[]).filter(x=>x.quote&&!x.quote_stale).length;$("openCount").textContent=o.open_positions??0;$("closedCount").textContent=o.paper_trades_closed??0;$("pnl").textContent=fmt(o.paper_realized_pnl);$("pnl").className="value "+(Number(o.paper_realized_pnl)>=0?"good":"bad");$("asof").textContent=d.as_of?"Last scan "+new Date(d.as_of).toLocaleTimeString():"No scan time";$("connection").textContent=d.status==="OK"?"Session report connected":"Waiting for session report"}
 function renderStocks(d){
  const query=$("search").value.toLowerCase(),filter=$("stockFilter").value;
  const rows=(d.stocks||[]).filter(x=>{const matches=(x.symbol+" "+x.company_name).toLowerCase().includes(query);const f=filter==="signals"?x.signals_count>0:filter==="ready"?x.status==="READY":filter==="gaps"?x.status!=="READY":true;return matches&&f});
- $("stocks").innerHTML=rows.map(x=>{const q=x.quote,age=x.tick_age_seconds===null?"No tick":x.tick_age_seconds+"s",ltp=q?fmt(q.ltp):"—",status=x.status==="READY"?pill("READY","good"):pill("GAP / WAIT","bad");return '<tr class="stockrow '+(state.selectedSymbol===x.symbol?"selected":"")+'" data-symbol="'+esc(x.symbol)+'"><td title="'+esc(x.reason||"")+'"><strong>'+esc(x.symbol)+'</strong><div class="muted">'+esc(x.company_name)+'</div><div class="muted">1m '+fmt(x.candles_1m,0)+' · 5m '+fmt(x.candles_5m,0)+' · 15m '+fmt(x.candles_15m,0)+'</div></td><td>'+ltp+'</td><td>'+esc(age)+'</td><td>'+status+'</td></tr>'}).join("")||'<tr><td colspan="4" class="empty">No matching stocks.</td></tr>';
+ $("stocks").innerHTML=rows.map(x=>{const q=x.quote,age=x.tick_age_seconds===null?"No quote":x.tick_age_seconds+"s"+(x.quote_stale?" · STALE":" · FRESH"),ltp=q?fmt(q.ltp):"—",status=x.status==="READY"?pill("READY","good"):pill("GAP / WAIT","bad");return '<tr class="stockrow '+(state.selectedSymbol===x.symbol?"selected":"")+'" data-symbol="'+esc(x.symbol)+'"><td title="'+esc(x.reason||"")+'"><strong>'+esc(x.symbol)+'</strong><div class="muted">'+esc(x.company_name)+'</div><div class="muted">1m '+fmt(x.candles_1m,0)+' · 5m '+fmt(x.candles_5m,0)+' · 15m '+fmt(x.candles_15m,0)+'</div></td><td title="'+esc(x.quote_source||"")+'">'+ltp+'</td><td class="'+(x.quote_stale?"bad":"good")+'">'+esc(age)+'</td><td>'+status+'</td></tr>'}).join("")||'<tr><td colspan="4" class="empty">No matching stocks.</td></tr>';
  document.querySelectorAll(".stockrow").forEach(row=>row.addEventListener("click",()=>selectStock(row.dataset.symbol)));
 }
 function renderSignals(d){
