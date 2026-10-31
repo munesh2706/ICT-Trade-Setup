@@ -146,3 +146,49 @@ def directional_target_candidates(
         candidates = [x for x in liquidity_levels if x.side == "sell_side" and x.price < entry_reference]
         return tuple(sorted(candidates, key=lambda x: x.price, reverse=True))
     raise ValueError("direction must be bullish or bearish")
+
+
+@dataclass(frozen=True, slots=True)
+class ICTMarketContext:
+    current_price: Decimal
+    dealing_range: DealingRange
+    price_location: str
+    liquidity_levels: tuple[LiquidityLevel, ...]
+    draws_above: tuple[LiquidityLevel, ...]
+    draws_below: tuple[LiquidityLevel, ...]
+
+
+def build_market_context(
+    *,
+    current_price: Decimal,
+    dealing_range_high: Decimal,
+    dealing_range_low: Decimal,
+    previous_day_candles: Sequence[Candle],
+    previous_week_candles: Sequence[Candle],
+    relative_equal_pools: Sequence[LiquidityPool] = (),
+) -> ICTMarketContext:
+    """Build a multi-period liquidity map without forcing a directional bias."""
+    range_ = dealing_range(dealing_range_high, dealing_range_low)
+    levels = list(previous_period_levels(previous_day_candles, period_name="Day"))
+    levels.extend(previous_period_levels(previous_week_candles, period_name="Week"))
+    for pool in relative_equal_pools:
+        levels.append(LiquidityLevel(
+            name="Relative Equal Highs" if pool.side == "buy_side" else "Relative Equal Lows",
+            price=pool.level,
+            side=pool.side,
+            source=pool.source,
+        ))
+    unique = {}
+    for level in levels:
+        unique[(level.name, level.price, level.side, level.source)] = level
+    ordered = tuple(sorted(unique.values(), key=lambda x: (x.price, x.side, x.name)))
+    above = tuple(sorted((x for x in ordered if x.side == "buy_side" and x.price > current_price), key=lambda x: x.price))
+    below = tuple(sorted((x for x in ordered if x.side == "sell_side" and x.price < current_price), key=lambda x: x.price, reverse=True))
+    return ICTMarketContext(
+        current_price=current_price,
+        dealing_range=range_,
+        price_location=classify_premium_discount(current_price, range_),
+        liquidity_levels=ordered,
+        draws_above=above,
+        draws_below=below,
+    )
