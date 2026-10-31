@@ -83,6 +83,9 @@ def state_payload() -> dict:
                 if position.instrument_id in quotes else None
             ),
         })
+    closed_trades = journal.closed_trade_rows()
+    closed_today = [row for row in closed_trades
+                    if str(row.get("exit_time", ""))[:10] == str(report.get("scan_date", ""))]
     return {
         "status": "OK", "as_of": report.get("as_of"), "scan_date": report.get("scan_date"),
         "universe_snapshot_id": report.get("universe_snapshot_id"),
@@ -91,12 +94,12 @@ def state_payload() -> dict:
             "signals": len(report.get("signals") or []), "live_ticks": live.get("symbols_with_tick", 0),
             "ticks_received": live.get("ticks_received", 0), "open_positions": len(open_positions),
             "paper_trades_opened": paper.get("positions_opened", 0),
-            "paper_trades_closed": paper.get("positions_closed", 0),
+            "paper_trades_closed": len(closed_today),
             "paper_realized_pnl": paper.get("realized_pnl_today", "0"),
             "stream_errors": live.get("recent_errors", []),
         },
         "stocks": stocks, "signals": report.get("signals") or [],
-        "open_positions": open_positions, "closed_trades": journal.closed_trade_rows(),
+        "open_positions": open_positions, "closed_trades": closed_trades[-200:],
         "paper_actions": paper.get("actions", []),
     }
 
