@@ -38,6 +38,14 @@ During the session, completed 1m, 5m and 15m candles are incrementally refreshed
 
 The main process is scripts/run_nifty50_session.py. It authenticates once, performs pre-session reconciliation, starts the quote stream, refreshes completed candles, runs the scanner and paper engine, and writes timestamped JSON reports.
 
+The local visual dashboard is served by dashboard/app.py and dashboard/index.html. Start it in a second terminal with:
+
+~~~powershell
+python -m uvicorn dashboard.app:app --host 127.0.0.1 --port 8000
+~~~
+
+It shows constituent readiness and candle counts, live quote age, explainable ICT setup stages, verified candlestick charts with FVG/liquidity/stop overlays, and open/closed paper positions. It is read-only and intended for localhost.
+
 ## ICT model scope
 
 - ICT 2022 Mentorship Episode 6: liquidity raid → displacement/MSS → in-range FVG candidate.
