@@ -177,6 +177,11 @@ class StockPaperStore:
                        (SignalStatus.OPEN.value, entry_time, signal_id))
         return True
 
+    def has_position_for_signal(self, signal_id: str) -> bool:
+        with self._connect() as db:
+            row = db.execute("SELECT 1 FROM paper_positions WHERE signal_id=?", (signal_id,)).fetchone()
+        return row is not None
+
     def load_open_positions(self) -> list[PaperPosition]:
         with self._connect() as db:
             rows = db.execute("""SELECT position_id,symbol,model_id,direction,entry_time_utc,
