@@ -107,10 +107,12 @@ Implemented in the current feature branch:
 - Liquidity penetration events at confirmed swings.
 - Bullish/bearish three-candle FVG geometry.
 - Initial 2022 Mentorship Episode 6 detector.
+- 2023 Silver Bullet candidate detector with exact New York windows, DST conversion, first directional FVG and same-window retest.
 - Dealing range, equilibrium, premium/discount and prior-period liquidity references.
 - Relative equal-high/low clustering with explicit tolerance.
 - FVG consequent encroachment.
 - Generic paper position sizing and conservative OHLC barrier resolution.
+- Daily portfolio risk guardrails, filled-position P&L simulation and net-of-cost performance statistics.
 
 Still required:
 - Feed normalization and historical/live data repository.
@@ -119,6 +121,6 @@ Still required:
 - Source-backed PD Array catalogue beyond FVG.
 - Additional separately versioned named ICT models.
 - Model-independent signal lifecycle and persistence.
-- Portfolio/risk-day controls.
+- Restart-safe persistence for signal and paper-trade event history.
 - Event-driven backtester and walk-forward reports.
 - Restart-safe paper trade journal and monitoring interface.
