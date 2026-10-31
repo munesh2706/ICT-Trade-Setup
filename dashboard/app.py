@@ -44,7 +44,8 @@ def state_payload() -> dict:
     report = latest_report()
     if report is None:
         return {"status": "NO_REPORT", "message": "No session report exists yet. Start the NIFTY 50 session runner.",
-                "as_of": None, "stocks": [], "signals": [], "open_positions": [], "closed_trades": []}
+                "as_of": None, "stocks": [], "signals": [], "stock_selection": {},
+                "open_positions": [], "closed_trades": []}
     now_utc = datetime.now(timezone.utc)
     report_age_seconds = None
     try:
@@ -114,9 +115,12 @@ def state_payload() -> dict:
             "paper_trades_opened": paper.get("positions_opened", 0),
             "paper_trades_closed": len(closed_today),
             "paper_realized_pnl": paper.get("realized_pnl_today", "0"),
+            "selected_stocks": len((report.get("stock_selection") or {}).get("selected") or []),
+            "ranking_as_of": (report.get("stock_selection") or {}).get("ranked_at"),
             "stream_errors": live.get("recent_errors", []), "quote_api": live.get("quote_api", {}),
         },
         "stocks": stocks, "signals": report.get("signals") or [],
+        "stock_selection": report.get("stock_selection") or {},
         "open_positions": open_positions, "closed_trades": closed_trades[-200:],
         "paper_actions": paper.get("actions", []),
     }

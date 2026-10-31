@@ -2,9 +2,9 @@ name: ICT Engine Tests
 
 on:
   pull_request:
-    branches: [main, fix/historical-candle-gap-audit]
+    branches: [main, fix/historical-candle-gap-audit, "feature/ict-2022-model-engine"]
   push:
-    branches: [main, "feature/ict-2022-model-engine"]
+    branches: [main, "feature/ict-2022-model-engine", "feature/nifty50-stock-ict-platform"]
 
 jobs:
   test:

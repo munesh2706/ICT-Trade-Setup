@@ -115,6 +115,40 @@ def test_paper_engine_rejects_same_bar_entry_and_stop_ambiguity(tmp_path):
     assert result.open_positions==0
 
 
+
+def test_paper_entry_eligibility_is_limited_to_selected_direction(tmp_path):
+    candles, journal, engine = make_engine(tmp_path)
+    selected = signal()
+    outside = replace(signal(), signal_id="signal-outside", symbol="XYZ", company_name="XYZ Ltd")
+    engine.instruments["XYZ"] = StockInstrument("XYZ", "XYZ Ltd", "XYZ-EQ", "67890", "NSE", "nse_cm", tick_size=D("0.05"))
+    scan = StockScanReport(date(2026,10,30), datetime(2026,10,30,10,0,tzinfo=IST),
+                           "universe-1", 50, 50, (outside, selected), ())
+    result = engine.process_scan_report(
+        scan, candles=candles, journal=journal,
+        eligible_symbols={"ABC"}, eligible_directions={"ABC": "bullish"},
+        signal_priorities={"ABC": 90.0},
+        eligible_since={"ABC": datetime(2026,10,30,10,0,tzinfo=IST)},
+    )
+    assert len(result.actions) == 1
+    assert result.actions[0]["symbol"] == "ABC"
+    assert journal.signal_status("signal-outside").value == "entry_armed"
+
+
+def test_global_single_position_cap_blocks_second_simultaneous_fill(tmp_path):
+    candles, journal, engine = make_engine(tmp_path)
+    first = signal()
+    second = replace(signal(), signal_id="signal-second")
+    scan = StockScanReport(date(2026,10,30), datetime(2026,10,30,10,2,tzinfo=IST),
+                           "universe-1", 50, 50, (first, second), ())
+    add_verified_candles(candles, "bars-two-candidates", [
+        candle(0,100.5,100.7,100.3,100.4),
+        candle(1,100.5,100.7,100.3,100.4),
+    ])
+    result = engine.process_scan_report(scan, candles=candles, journal=journal)
+    assert result.positions_opened == 1
+    assert result.open_positions == 1
+    assert len(journal.load_open_positions()) == 1
+
 def test_pending_paper_signal_expires_at_exchange_session_close(tmp_path):
     candles,journal,engine=make_engine(tmp_path)
     sig=signal()

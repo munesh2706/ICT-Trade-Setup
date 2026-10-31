@@ -23,6 +23,8 @@ This is the authoritative current scope for the stock platform. Older index-focu
 - Angel One historical candle acquisition, reconciliation, verified storage and live quote monitoring.
 - Event-driven historical replay, explicit costs/slippage assumptions, out-of-sample reporting and broker-free paper execution.
 - A local visual dashboard for universe readiness, quote freshness, setup evidence, verified candles, paper positions and performance.
+- A 15-minute balanced stock-selection layer (target two bullish/two bearish, up to four total) that prioritizes paper-entry eligibility without suppressing universe-wide ICT scanning.
+- A global maximum of one active paper position.
 
 ## Excluded
 
@@ -69,6 +71,8 @@ If two lessons or model variants differ, preserve them as separately named/versi
 - New York-local ICT windows must be converted using the IANA `America/New_York` timezone database; do not hard-code a fixed IST offset.
 - Paper risk limits, entry variants, stop references, target selection, quantity step, fees and slippage are platform execution settings, not ICT rules.
 - The dashboard is read-only and intended for localhost unless authentication and deployment security are separately implemented.
+- Stock selection is a ranking heuristic, not a predictive probability or ICT model. Initial relative-strength and industry-strength comparisons use the equal-weight NIFTY 50 constituent basket and NSE constituent Industry labels as proxies; no official NIFTY/sector-index prices are claimed.
+- Initial qualification threshold (60/100), replacement margin (8 points), and same-time RVOL minimum (10 prior-session samples, up to 20) are provisional engineering defaults and require historical sensitivity testing.
 - No live broker order endpoint may be called by the paper engine or dashboard.
 
 ## Change control

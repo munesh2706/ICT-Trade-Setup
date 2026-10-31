@@ -28,6 +28,7 @@ from ict_engine.stock_feed import AngelOneStockFeed
 from ict_engine.stock_live_refresh import refresh_current_session
 from ict_engine.stock_reconciliation import reconcile_universe
 from ict_engine.stock_scanner import StockICTScanConfig, StockICTScanner
+from ict_engine.stock_selection import rank_and_select_stocks, ranking_cycle_due
 from ict_engine.paper_store import StockPaperStore
 from ict_engine.paper_trading import StockPaperTradingEngine, load_paper_trading_config
 from ict_engine.stock_storage import StockCandleStore
@@ -90,7 +91,7 @@ def _merge_quote_sources(latest_ticks, quote_batch):
             selected[symbol] = record
     return selected
 
-def write_report(report, directory: Path, *, tick_count: int, stream_errors: list[str], latest_ticks=None, quote_batch=None, paper_report=None, expired_signals: int = 0):
+def write_report(report, directory: Path, *, tick_count: int, stream_errors: list[str], latest_ticks=None, quote_batch=None, paper_report=None, expired_signals: int = 0, stock_selection=None):
     directory.mkdir(parents=True, exist_ok=True)
     payload = encode(report)
     quotes = _merge_quote_sources(latest_ticks, quote_batch)
@@ -111,11 +112,30 @@ def write_report(report, directory: Path, *, tick_count: int, stream_errors: lis
     }
     if paper_report is not None:
         payload["paper_trading"] = encode(paper_report)
+    if stock_selection is not None:
+        payload["stock_selection"] = encode(stock_selection)
         payload["paper_trading"]["signals_expired_at_session_close"] = expired_signals
     name = f"stock_scan_{report.scan_date.isoformat()}_{report.as_of.strftime('%H%M%S')}.json"
     path = directory / name
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return path
+
+def _load_previous_selection(reports_dir: Path, scan_date) -> dict:
+    """Restore today's last ranking so a restart does not churn the watchlist."""
+    if not reports_dir.exists():
+        return {}
+    for path in sorted(reports_dir.glob("stock_scan_*.json"),
+                       key=lambda item: item.stat().st_mtime, reverse=True):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if payload.get("scan_date") == scan_date.isoformat():
+                selection = payload.get("stock_selection")
+                if isinstance(selection, dict):
+                    return selection
+        except (OSError, json.JSONDecodeError):
+            continue
+    return {}
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the NIFTY 50 stock ICT session pipeline")
@@ -149,7 +169,9 @@ def main() -> int:
         if args.history_start < calendar.coverage_start:
             raise ValueError("history start is outside NSE calendar coverage")
 
-        paper_config = load_paper_trading_config(args.paper_config)
+        # Enforce the agreed global one-position limit even if a local config
+        # still contains an older max_open_positions value.
+        paper_config = replace(load_paper_trading_config(args.paper_config), max_open_positions=1)
         universe = download_nse_universe()
         universe_path = save_universe_snapshot(universe, args.universe_dir)
         feed = AngelOneStockFeed.connect_from_env(universe, pace_seconds=args.pace_seconds)
@@ -211,7 +233,13 @@ def main() -> int:
         feed.start_stream(on_tick, on_error=on_error, on_open=on_open, on_close=on_close, mode=2)
         stream_started = True
         scanner = StockICTScanner(StockICTScanConfig(enable_silver_bullet=not args.disable_silver_bullet))
-
+        stock_selection = _load_previous_selection(args.reports_dir, now.date())
+        last_ranked_at = None
+        if stock_selection.get("ranked_at"):
+            try:
+                last_ranked_at = datetime.fromisoformat(stock_selection["ranked_at"])
+            except (TypeError, ValueError):
+                stock_selection = {}
         if not args.once and now < session.open_at.astimezone(IST):
             wait_seconds = (session.open_at.astimezone(IST) - now).total_seconds()
             print(f"Waiting {int(wait_seconds)} seconds for NSE session open.")
@@ -237,9 +265,31 @@ def main() -> int:
                 scan_date=as_of.date(), as_of=as_of,
                 cas_eligible_symbols=feed.cas_eligible_symbols,
             )
+            if args.once or ranking_cycle_due(as_of, last_ranked_at):
+                stock_selection = rank_and_select_stocks(
+                    universe=universe, store=store, calendar=calendar,
+                    scan_date=as_of.date(), as_of=as_of,
+                    cas_eligible_symbols=feed.cas_eligible_symbols,
+                    previous_selection=stock_selection.get("selected", []),
+                    minimum_score=float(os.getenv("ICT_STOCK_MIN_SCORE", "60")),
+                    replacement_margin=float(os.getenv("ICT_STOCK_REPLACEMENT_MARGIN", "8")),
+                )
+                last_ranked_at = as_of
+            selected_rows = stock_selection.get("selected", [])
+            selected_symbols = {row["symbol"] for row in selected_rows}
+            selected_directions = {row["symbol"]: row["direction"] for row in selected_rows}
+            selected_priorities = {row["symbol"]: float(row["score"]) for row in selected_rows}
+            selected_since = {
+                row["symbol"]: datetime.fromisoformat(row["selected_since"])
+                for row in selected_rows if row.get("selected_since")
+            }
             paper = paper_engine.process_scan_report(
                 scan, candles=store, journal=paper_journal, calendar=calendar,
                 cas_eligible_symbols=feed.cas_eligible_symbols,
+                eligible_symbols=selected_symbols,
+                eligible_directions=selected_directions,
+                signal_priorities=selected_priorities,
+                eligible_since=selected_since,
             )
             with lock:
                 count = tick_count
@@ -257,7 +307,7 @@ def main() -> int:
                     )
             except Exception as quote_exc:
                 errors.append(f"FULL quote fallback failed: {type(quote_exc).__name__}")
-            report_path = write_report(scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, quote_batch=quote_batch, paper_report=paper, expired_signals=startup_expired)
+            report_path = write_report(scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, quote_batch=quote_batch, paper_report=paper, expired_signals=startup_expired, stock_selection=stock_selection)
             print(json.dumps({
                 "as_of": as_of.isoformat(),
                 "refreshed_series_ready": refresh.ready_series,
@@ -297,6 +347,11 @@ def main() -> int:
         final_paper = paper_engine.process_scan_report(
             final_scan, candles=store, journal=paper_journal, calendar=calendar,
             cas_eligible_symbols=feed.cas_eligible_symbols,
+            eligible_symbols={row["symbol"] for row in stock_selection.get("selected", [])},
+            eligible_directions={row["symbol"]: row["direction"] for row in stock_selection.get("selected", [])},
+            signal_priorities={row["symbol"]: float(row["score"]) for row in stock_selection.get("selected", [])},
+            eligible_since={row["symbol"]: datetime.fromisoformat(row["selected_since"])
+                            for row in stock_selection.get("selected", []) if row.get("selected_since")},
         )
         final_session = calendar.session_for(final_as_of.date())
         final_expired = 0
@@ -321,7 +376,7 @@ def main() -> int:
                 )
         except Exception as quote_exc:
             errors.append(f"Final FULL quote fallback failed: {type(quote_exc).__name__}")
-        report_path = write_report(final_scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, quote_batch=quote_batch, paper_report=final_paper, expired_signals=startup_expired + final_expired)
+        report_path = write_report(final_scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, quote_batch=quote_batch, paper_report=final_paper, expired_signals=startup_expired + final_expired, stock_selection=stock_selection)
         print(json.dumps({
             "phase": "POST_SESSION",
             "ready_series": final_refresh.ready_series,

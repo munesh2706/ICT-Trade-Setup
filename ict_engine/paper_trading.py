@@ -7,7 +7,7 @@ its entry chronology is implemented without retroactive fills.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
 import json
 from pathlib import Path
@@ -32,7 +32,7 @@ class PaperTradingConfig:
     round_trip_slippage_points: Decimal
     risk_per_trade_fraction: Decimal = Decimal("0.005")
     max_daily_loss_fraction: Decimal = Decimal("0.02")
-    max_open_positions: int = 3
+    max_open_positions: int = 1
     max_trades_per_day: int = 5
     max_consecutive_losses: int = 3
     entry_variant: str = "detector_reference"
@@ -92,7 +92,7 @@ def load_paper_trading_config(path: str | Path) -> PaperTradingConfig:
             round_trip_slippage_points=Decimal(str(payload["round_trip_slippage_points"])),
             risk_per_trade_fraction=Decimal(str(payload.get("risk_per_trade_fraction", "0.005"))),
             max_daily_loss_fraction=Decimal(str(payload.get("max_daily_loss_fraction", "0.02"))),
-            max_open_positions=int(payload.get("max_open_positions", 3)),
+            max_open_positions=int(payload.get("max_open_positions", 1)),
             max_trades_per_day=int(payload.get("max_trades_per_day", 5)),
             max_consecutive_losses=int(payload.get("max_consecutive_losses", 3)),
             entry_variant=str(payload.get("entry_variant", "detector_reference")),
@@ -208,7 +208,8 @@ class StockPaperTradingEngine:
                    candles: StockCandleStore, journal: StockPaperStore,
                    risk: DailyRiskState, limits: RiskLimits, *,
                    calendar: ExchangeCalendar | None = None,
-                   cas_eligible_symbols: set[str] | None = None) -> str:
+                   cas_eligible_symbols: set[str] | None = None,
+                   not_before: datetime | None = None) -> str:
         if "SILVER_BULLET" in signal.model_id.upper():
             self._event(journal, signal, SignalStatus.NO_TRADE, report,
                         "Silver Bullet entry chronology is alert-only; no retroactive fill is permitted",
@@ -226,7 +227,7 @@ class StockPaperTradingEngine:
             return "no_trade"
 
         first_seen = journal.signal_created_at(signal.signal_id)
-        scan_start = max(first_seen, signal.available_at)
+        scan_start = max(first_seen, signal.available_at, not_before) if not_before is not None else max(first_seen, signal.available_at)
         if report.as_of - scan_start > timedelta(minutes=self.config.max_entry_wait_minutes):
             self._event(journal, signal, SignalStatus.MISSED, report,
                         "FVG limit entry expired without a verified fill", "missed-entry-expired")
@@ -320,7 +321,11 @@ class StockPaperTradingEngine:
                             candles: StockCandleStore,
                             journal: StockPaperStore,
                             calendar: ExchangeCalendar | None = None,
-                            cas_eligible_symbols: set[str] | None = None) -> PaperEngineReport:
+                            cas_eligible_symbols: set[str] | None = None,
+                            eligible_symbols: set[str] | None = None,
+                            eligible_directions: dict[str, str] | None = None,
+                            signal_priorities: dict[str, float] | None = None,
+                            eligible_since: dict[str, datetime] | None = None) -> PaperEngineReport:
         cas_eligible_symbols = set(cas_eligible_symbols or ())
         risk = journal.load_daily_risk(report.scan_date, self.config.starting_equity)
         limits = self._limits()
@@ -330,7 +335,22 @@ class StockPaperTradingEngine:
         )
         registered = opened = rejected = no_trade = 0
         actions = []
-        for signal in report.signals:
+        # The exit bar of the previous position cannot also open the next one.
+        latest_exit = None
+        for row in journal.closed_trade_rows():
+            try:
+                stamp = datetime.fromisoformat(str(row.get("exit_time", "")))
+                latest_exit = stamp if latest_exit is None or stamp > latest_exit else latest_exit
+            except (TypeError, ValueError):
+                continue
+        trade_slot_not_before = latest_exit + timedelta(minutes=1) if latest_exit is not None else None
+        priorities = signal_priorities or {}
+        ordered_signals = sorted(
+            report.signals,
+            key=lambda item: (-float(priorities.get(item.symbol, 0.0)),
+                              item.available_at, item.symbol, item.model_id),
+        )
+        for signal in ordered_signals:
             if journal.register_signal(signal, evidence=_signal_evidence(signal), observed_at=report.as_of):
                 registered += 1
             current_status = journal.signal_status(signal.signal_id)
@@ -345,9 +365,21 @@ class StockPaperTradingEngine:
                 continue
             if journal.has_position_for_signal(signal.signal_id):
                 continue
+            if eligible_symbols is not None and signal.symbol not in eligible_symbols:
+                continue
+            if eligible_directions is not None and eligible_directions.get(signal.symbol) != signal.direction:
+                continue
+            # Leave candidates pending while the global trade slot is occupied.
+            # They cannot be retroactively filled after that position closes.
+            if journal.load_open_positions():
+                continue
+            not_before = (eligible_since or {}).get(signal.symbol)
+            if trade_slot_not_before is not None:
+                not_before = max(not_before, trade_slot_not_before) if not_before is not None else trade_slot_not_before
             action = self._try_entry(
                 signal, report, candles, journal, risk, limits,
                 calendar=calendar, cas_eligible_symbols=cas_eligible_symbols,
+                not_before=not_before,
             )
             actions.append({"signal_id": signal.signal_id, "symbol": signal.symbol, "action": action})
             if action == "opened":

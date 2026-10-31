@@ -52,5 +52,6 @@ def test_dashboard_state_exposes_verified_stock_and_signal_health(tmp_path, monk
     assert payload["overview"]["signals"] == 1
     assert payload["stocks"][0]["quote"]["ltp"] == "1450.00"
     assert payload["stocks"][0]["signals_count"] == 1
+    assert payload["stock_selection"] == {}
     assert payload["open_positions"] == []
     assert db.exists()
