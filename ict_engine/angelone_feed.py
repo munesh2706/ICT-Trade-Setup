@@ -34,6 +34,7 @@ class AngelOneHistoricalFeed:
         self._instruments = dict(instruments)
         self._pace_seconds = pace_seconds
         self._last_request_at = 0.0
+        self.raw_responses: list[dict] = []
 
     @classmethod
     def connect_from_env(cls, *, pace_seconds: float = 1.0, env_path: str | Path = ROOT / ".env"):
@@ -99,6 +100,8 @@ class AngelOneHistoricalFeed:
         }
         try:
             payload = self._client.getCandleData(params)
+            fetched_at = datetime.now(timezone.utc)
+            self.raw_responses.append({"instrument_id": instrument_id, "timeframe": timeframe, "fetched_at": fetched_at, "request_params": dict(params), "payload": payload})
         except Exception:
             raise AngelOneFeedError("Angel One historical request failed; no automatic retry was attempted") from None
         if not isinstance(payload, dict) or payload.get("status") is not True:
