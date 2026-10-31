@@ -76,7 +76,7 @@ Before starting either runner, copy config/paper_trading.example.json to config/
 
 ## Operating instructions
 
-See docs/PRE_SESSION_RUNBOOK.md, docs/STOCK_DATA_RECONCILIATION.md and docs/BACKTEST_RUNBOOK.md.
+See docs/PRE_SESSION_RUNBOOK.md, docs/STOCK_UNIVERSE_AND_RECONCILIATION.md and docs/BACKTEST_RUNBOOK.md.
 
 ## Project boundary
 
