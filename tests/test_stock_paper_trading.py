@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 from ict_engine.context import LiquidityLevel
 from ict_engine.models import Candle
+from ict_engine.market_calendar import ExchangeCalendar, TradingSession
 from ict_engine.paper_store import StockPaperStore
 from ict_engine.paper_trading import PaperTradingConfig, StockPaperTradingEngine
 from ict_engine.stock_feed import StockInstrument
@@ -124,3 +125,37 @@ def test_pending_paper_signal_expires_at_exchange_session_close(tmp_path):
     assert expired==1
     assert journal.signal_status(sig.signal_id).value=="expired"
     assert journal.pending_signals()==[]
+
+
+def test_paper_engine_does_not_fill_from_cas_auction_candle(tmp_path):
+    candles, journal, engine = make_engine(tmp_path)
+    sig = signal()
+    engine.process_scan_report(
+        report(sig, datetime(2026, 10, 30, 10, 0, tzinfo=IST)),
+        candles=candles, journal=journal,
+    )
+    auction = Candle(
+        datetime(2026, 10, 30, 15, 28, tzinfo=IST),
+        D("100.5"), D("101.0"), D("100.2"), D("100.8"), D("1000"),
+    )
+    add_verified_candles(candles, "bars-cas-auction", [auction])
+    session = TradingSession(
+        "NSE", date(2026, 10, 30),
+        datetime(2026, 10, 30, 9, 15, tzinfo=IST),
+        datetime(2026, 10, 30, 15, 30, tzinfo=IST),
+        "official NSE session",
+        datetime(2026, 10, 30, 15, 15, tzinfo=IST),
+        "NSE CAS; continuous session ends 15:15 IST",
+    )
+    calendar = ExchangeCalendar(
+        "NSE", "Asia/Kolkata", date(2026, 10, 30), date(2026, 10, 30),
+        [session], [], "NSE CAS test calendar",
+    )
+    result = engine.process_scan_report(
+        report(sig, datetime(2026, 10, 30, 15, 30, tzinfo=IST)),
+        candles=candles, journal=journal, calendar=calendar,
+        cas_eligible_symbols={"ABC"},
+    )
+    assert result.positions_opened == 0
+    assert result.pending_signals == 1
+    assert result.open_positions == 0
