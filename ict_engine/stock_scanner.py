@@ -36,6 +36,7 @@ class StockICTScanConfig:
     max_bars_after_mss: int = 3
     max_5m_lookback_bars: int = 240
     max_1m_lookback_bars: int = 420
+    max_15m_context_bars: int = 300
     equal_high_low_tolerance_by_symbol: dict[str, Decimal] | None = None
     candle_timestamp_role: str = "start"
 
@@ -45,7 +46,8 @@ class StockICTScanConfig:
         if not ZERO < self.displacement_min_body_to_range <= Decimal("1"):
             raise ValueError("displacement threshold must be in (0,1]")
         if min(self.max_bars_after_sweep, self.max_bars_after_mss,
-               self.max_5m_lookback_bars, self.max_1m_lookback_bars) < 1:
+               self.max_5m_lookback_bars, self.max_1m_lookback_bars,
+               self.max_15m_context_bars) < 1:
             raise ValueError("bar limits must be positive")
         if self.candle_timestamp_role != "start":
             raise ValueError("current stock scanner requires verified Angel One start-time candle timestamps")
