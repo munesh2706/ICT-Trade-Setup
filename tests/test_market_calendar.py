@@ -43,3 +43,40 @@ def test_duplicate_session_dates_rejected():
 def test_date_cannot_be_both_open_and_closed():
     with pytest.raises(ValueError):
         calendar([regular_session()], [DAY])
+
+def test_cas_eligible_cash_equity_uses_continuous_close_not_auction_close():
+    continuous_close = datetime(2026, 10, 30, 15, 15, tzinfo=IST)
+    session = TradingSession(
+        "NSE", date(2026, 10, 30),
+        datetime(2026, 10, 30, 9, 15, tzinfo=IST),
+        datetime(2026, 10, 30, 15, 30, tzinfo=IST),
+        "official NSE session",
+        continuous_close,
+        "NSE CAS effective 2026-08-03; F&O cash equities continuous session ends 15:15 IST",
+    )
+    cal = ExchangeCalendar(
+        "NSE", "Asia/Kolkata", date(2026, 10, 30), date(2026, 10, 30),
+        [session], [], "NSE calendar with CAS boundary",
+    )
+    assert len(cal.expected_candle_starts(date(2026, 10, 30), 1)) == 375
+    assert len(cal.expected_candle_starts(date(2026, 10, 30), 5)) == 75
+    assert len(cal.expected_candle_starts(date(2026, 10, 30), 15)) == 25
+    assert len(cal.expected_candle_starts(date(2026, 10, 30), 1, cas_eligible=True)) == 360
+    assert len(cal.expected_candle_starts(date(2026, 10, 30), 5, cas_eligible=True)) == 72
+    assert len(cal.expected_candle_starts(date(2026, 10, 30), 15, cas_eligible=True)) == 24
+    assert cal.expected_candle_starts(date(2026, 10, 30), 1, cas_eligible=True)[-1] == continuous_close.replace(minute=14)
+    assert cal.is_continuous_trading_at(datetime(2026, 10, 30, 15, 14, tzinfo=IST), cas_eligible=True)
+    assert not cal.is_continuous_trading_at(datetime(2026, 10, 30, 15, 15, tzinfo=IST), cas_eligible=True)
+    assert cal.is_continuous_trading_at(datetime(2026, 10, 30, 15, 28, tzinfo=IST), cas_eligible=False)
+
+
+def test_cas_boundary_requires_timezone_aware_source_and_valid_order():
+    with pytest.raises(ValueError, match="continuous close must be timezone-aware"):
+        TradingSession(
+            "NSE", date(2026, 10, 30),
+            datetime(2026, 10, 30, 9, 15, tzinfo=IST),
+            datetime(2026, 10, 30, 15, 30, tzinfo=IST),
+            "official",
+            datetime(2026, 10, 30, 15, 15),
+            "CAS source",
+        )
