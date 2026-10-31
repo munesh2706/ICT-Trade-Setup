@@ -1,7 +1,7 @@
 """Calendar-based data coverage audit and snapshot verification."""
 from __future__ import annotations
 from dataclasses import dataclass
-from datetime import date, timezone
+from datetime import date, time, timezone
 from typing import Mapping, Sequence
 from .market_calendar import ExchangeCalendar
 from .instruments import INDEX_INSTRUMENTS
@@ -20,15 +20,17 @@ class CoverageAudit:
     def passed(self) -> bool:
         return not self.missing and not self.unexpected and self.expected_count == self.observed_count
 
-def audit_candle_grid(candles: Sequence[Candle], *, calendar: ExchangeCalendar, trading_dates: Sequence[date], interval_minutes: int) -> CoverageAudit:
+def audit_candle_grid(candles: Sequence[Candle], *, calendar: ExchangeCalendar, trading_dates: Sequence[date], interval_minutes: int, daily_anchor: str | None = None) -> CoverageAudit:
     if not trading_dates:
         raise ValueError("trading_dates cannot be empty")
     expected = []
     for day in trading_dates:
         if interval_minutes == 1440:
+            if daily_anchor not in {"session_open", "local_midnight"}:
+                raise ValueError("daily_anchor must explicitly be session_open or local_midnight")
             session = calendar.session_for(day)
             if session is not None:
-                expected.append(session.open_at)
+                expected.append(session.open_at if daily_anchor == "session_open" else datetime.combine(day, time.min, calendar.timezone))
         else:
             expected.extend(calendar.expected_candle_starts(day, interval_minutes))
     expected_utc = {x.astimezone(timezone.utc).isoformat(timespec="microseconds") for x in expected}
@@ -47,14 +49,18 @@ def verify_snapshot(store: CandleStore, snapshot_id: str, requirements: Mapping[
     if not requirements:
         raise ValueError("at least one instrument/timeframe requirement is required")
     audits = {}
-    for (instrument_id, timeframe), (calendar, dates) in requirements.items():
+    for (instrument_id, timeframe), requirement in requirements.items():
+        if len(requirement) not in {2, 3}:
+            raise ValueError("requirement must contain calendar, trading dates and optional daily anchor")
+        calendar, dates = requirement[0], requirement[1]
+        daily_anchor = requirement[2] if len(requirement) == 3 else None
         spec = INDEX_INSTRUMENTS.get(instrument_id)
         if spec is not None and calendar.exchange != spec.exchange:
             raise ValueError(f"calendar exchange mismatch for {instrument_id}")
         if timeframe not in TIMEFRAME_MINUTES:
             raise ValueError(f"unsupported timeframe: {timeframe}")
         candles = store.load_candles(instrument_id, timeframe, snapshot_id, allow_incomplete=True)
-        audits[(instrument_id, timeframe)] = audit_candle_grid(candles, calendar=calendar, trading_dates=dates, interval_minutes=TIMEFRAME_MINUTES[timeframe])
+        audits[(instrument_id, timeframe)] = audit_candle_grid(candles, calendar=calendar, trading_dates=dates, interval_minutes=TIMEFRAME_MINUTES[timeframe], daily_anchor=daily_anchor)
     if all(audit.passed for audit in audits.values()):
         store.finalize_snapshot(snapshot_id, status="VERIFIED")
     return audits
