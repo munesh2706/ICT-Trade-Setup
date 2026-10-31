@@ -36,7 +36,7 @@ The lesson does not prescribe a universal machine-readable pivot algorithm, pivo
 - max_bars_after_sweep
 - max_bars_after_mss
 
-The current detector uses strict unique local pivots and candle body/range ratio as a measurable displacement proxy. It also requires explicit maximum bar counts between the liquidity raid and MSS, and between MSS and completion of the qualifying FVG, to prevent unrelated events much later in the dataset from being joined into one setup. These bar-count limits are engineering approximations because the lesson says the shift should occur quickly but does not specify a universal number of bars. All are configurable and must be validated against annotated lesson examples before any performance claim. They are not attributed to ICT.
+The detector can use either confirmed local swing liquidity or externally supplied completed-period/equal-high-low liquidity references. It uses strict unique local pivots and candle body/range ratio as a measurable displacement proxy. It also requires explicit maximum bar counts between the liquidity raid and MSS, and between MSS and completion of the qualifying FVG, to prevent unrelated events much later in the dataset from being joined into one setup. These bar-count limits are engineering approximations because the lesson says the shift should occur quickly but does not specify a universal number of bars. All are configurable and must be validated against annotated lesson examples before any performance claim. They are not attributed to ICT.
 
 ## Non-repainting constraints
 - Only completed candles may enter the detector.
