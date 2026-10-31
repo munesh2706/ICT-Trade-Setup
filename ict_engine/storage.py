@@ -1,6 +1,7 @@
 """Snapshot-versioned SQLite storage for canonical index candles."""
 from __future__ import annotations
 import sqlite3
+import json
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -42,6 +43,13 @@ class CandleStore:
                 PRIMARY KEY(instrument_id,timeframe,start_utc,snapshot_id),
                 FOREIGN KEY(snapshot_id) REFERENCES candle_snapshots(snapshot_id))""")
             db.execute("CREATE INDEX IF NOT EXISTS idx_candles_lookup ON candles(instrument_id,timeframe,snapshot_id,start_utc)")
+            db.execute("""CREATE TABLE IF NOT EXISTS raw_batches (
+                snapshot_id TEXT NOT NULL, batch_no INTEGER NOT NULL,
+                instrument_id TEXT NOT NULL, timeframe TEXT NOT NULL,
+                fetched_at_utc TEXT NOT NULL, request_json TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                PRIMARY KEY(snapshot_id,batch_no),
+                FOREIGN KEY(snapshot_id) REFERENCES candle_snapshots(snapshot_id))""")
 
     def create_snapshot(self, snapshot_id: str, *, description: str = "") -> None:
         if not snapshot_id.strip():
@@ -71,6 +79,34 @@ class CandleStore:
         if row is None:
             raise ValueError("unknown snapshot_id")
         return row[0]
+
+    def store_raw_batch(self, snapshot_id: str, batch_no: int, instrument_id: str, timeframe: str,
+                        fetched_at: datetime, request_params: dict, payload: dict) -> None:
+        """Persist the successful/failed provider response without auth material."""
+        allowed_params = {"exchange", "symboltoken", "interval", "fromdate", "todate"}
+        if set(request_params) - allowed_params:
+            raise ValueError("raw request metadata contains an unapproved field")
+        request_json = json.dumps(request_params, sort_keys=True, separators=(",", ":"))
+        payload_json = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+        fetched_utc = _utc_iso(fetched_at)
+        with self._connect() as db:
+            snapshot = db.execute("SELECT status FROM candle_snapshots WHERE snapshot_id=?", (snapshot_id,)).fetchone()
+            if snapshot is None or snapshot[0] != "OPEN":
+                raise ValueError("raw batches can only be added to an OPEN snapshot")
+            existing = db.execute("SELECT instrument_id,timeframe,fetched_at_utc,request_json,payload_json FROM raw_batches WHERE snapshot_id=? AND batch_no=?", (snapshot_id, batch_no)).fetchone()
+            row = (instrument_id, timeframe, fetched_utc, request_json, payload_json)
+            if existing is not None:
+                if tuple(existing) != row:
+                    raise CandleConflict(f"raw batch conflict at batch {batch_no}")
+                return
+            db.execute("INSERT INTO raw_batches(snapshot_id,batch_no,instrument_id,timeframe,fetched_at_utc,request_json,payload_json) VALUES (?,?,?,?,?,?,?)",
+                       (snapshot_id, batch_no, *row))
+
+    def load_raw_batches(self, snapshot_id: str) -> list[dict]:
+        with self._connect() as db:
+            rows = db.execute("SELECT batch_no,instrument_id,timeframe,fetched_at_utc,request_json,payload_json FROM raw_batches WHERE snapshot_id=? ORDER BY batch_no", (snapshot_id,)).fetchall()
+        return [{"batch_no": r[0], "instrument_id": r[1], "timeframe": r[2], "fetched_at_utc": r[3],
+                 "request": json.loads(r[4]), "payload": json.loads(r[5])} for r in rows]
 
     def store_candles(self, instrument_id: str, timeframe: str, snapshot_id: str, source: str, candles: Sequence[Candle]) -> int:
         """Insert immutable rows atomically; identical repeats are idempotent.
