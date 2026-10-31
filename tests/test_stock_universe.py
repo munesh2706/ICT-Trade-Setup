@@ -3,7 +3,7 @@ import pytest
 from decimal import Decimal
 
 from ict_engine.stock_universe import (
-    UniverseError, parse_nse_constituent_csv, resolve_angelone_equities,
+    UniverseError, parse_nse_constituent_csv, resolve_angelone_equities,\n    resolve_angelone_cas_eligible_symbols,
 )
 
 def make_csv(count=50):
@@ -44,3 +44,18 @@ def test_angel_master_missing_or_ambiguous_token_fails_closed():
     ]
     with pytest.raises(UniverseError):
         resolve_angelone_equities(snapshot, master)
+
+
+def test_cas_eligibility_requires_nfo_stock_futures_for_member_name():
+    snapshot = parse_nse_constituent_csv(make_csv(), captured_on=date(2026, 10, 31))
+    master = [
+        {"name": f"SYM{i:02d}", "exch_seg": "NFO", "instrumenttype": "FUTSTK"}
+        for i in range(49)
+    ]
+    master += [
+        {"name": "SYM49", "exch_seg": "NFO", "instrumenttype": "OPTSTK"},
+        {"name": "SYM00", "exch_seg": "NSE", "instrumenttype": "FUTSTK"},
+        {"name": "OUTSIDE", "exch_seg": "NFO", "instrumenttype": "FUTSTK"},
+    ]
+    eligible = resolve_angelone_cas_eligible_symbols(snapshot, master)
+    assert eligible == {f"SYM{i:02d}" for i in range(49)}
