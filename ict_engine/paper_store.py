@@ -127,6 +127,13 @@ class StockPaperStore:
                        (target_status.value, stamp, signal_id))
         return True
 
+    def signal_created_at(self, signal_id: str) -> datetime:
+        with self._connect() as db:
+            row = db.execute("SELECT created_at_utc FROM paper_signals WHERE signal_id=?", (signal_id,)).fetchone()
+        if row is None:
+            raise ValueError("unknown signal_id")
+        return datetime.fromisoformat(row[0])
+
     def signal_status(self, signal_id: str) -> SignalStatus:
         with self._connect() as db:
             row = db.execute("SELECT status FROM paper_signals WHERE signal_id=?", (signal_id,)).fetchone()
