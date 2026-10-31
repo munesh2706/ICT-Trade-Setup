@@ -52,22 +52,59 @@ def encode(value):
         return [encode(v) for v in value]
     return value
 
-def write_report(report, directory: Path, *, tick_count: int, stream_errors: list[str], latest_ticks=None, paper_report=None, expired_signals: int = 0):
+def _quote_record(quote, *, source: str):
+    stamp = getattr(quote, "exchange_timestamp", None)
+    received = quote.received_at
+    age = getattr(quote, "age_seconds", None)
+    stale = getattr(quote, "stale", None)
+    if age is None and stamp is not None:
+        age = (received - stamp).total_seconds()
+    if stale is None:
+        stale = age is None or age < -5 or age > 90
+    return {
+        "ltp": str(quote.ltp),
+        "exchange_timestamp": stamp.isoformat() if stamp is not None else None,
+        "received_at": received.isoformat(),
+        "age_seconds": age,
+        "stale": bool(stale),
+        "source": source,
+    }
+
+def _merge_quote_sources(latest_ticks, quote_batch):
+    selected = {}
+    if quote_batch is not None:
+        for quote in quote_batch.quotes:
+            selected[quote.symbol] = _quote_record(quote, source="Angel One SmartAPI FULL quote")
+    for symbol, tick in (latest_ticks or {}).items():
+        record = _quote_record(tick, source="Angel One WebSocket V2")
+        current = selected.get(symbol)
+        if current is None or (current["stale"] and not record["stale"]):
+            selected[symbol] = record
+        elif current["stale"] and record["stale"]:
+            if record["age_seconds"] is not None and (
+                current["age_seconds"] is None or record["age_seconds"] < current["age_seconds"]
+            ):
+                selected[symbol] = record
+    return selected
+
+def write_report(report, directory: Path, *, tick_count: int, stream_errors: list[str], latest_ticks=None, quote_batch=None, paper_report=None, expired_signals: int = 0):
     directory.mkdir(parents=True, exist_ok=True)
     payload = encode(report)
-    quotes = latest_ticks or {}
+    quotes = _merge_quote_sources(latest_ticks, quote_batch)
     payload["live_stream"] = {
         "ticks_received": tick_count,
-        "symbols_with_tick": len(quotes),
-        "quotes": {
-            symbol: {
-                "ltp": str(tick.ltp),
-                "exchange_timestamp": tick.exchange_timestamp.isoformat(),
-                "received_at": tick.received_at.isoformat(),
-            } for symbol, tick in quotes.items()
-        },
+        "symbols_with_tick": len(latest_ticks or {}),
+        "symbols_with_quote": len(quotes),
+        "quotes": quotes,
+        "quote_api": {
+            "complete": quote_batch.complete,
+            "missing_symbols": list(quote_batch.missing_symbols),
+            "stale_symbols": list(quote_batch.stale_symbols),
+            "unfetched_tokens": list(quote_batch.unfetched_tokens),
+            "errors": list(quote_batch.errors),
+        } if quote_batch is not None else {"complete": False, "errors": ["quote API snapshot unavailable"]},
         "recent_errors": stream_errors[-10:],
-        "source": "Angel One SmartAPI WebSocket V2",
+        "source": "Angel One SmartAPI WebSocket V2 with FULL quote fallback",
     }
     if paper_report is not None:
         payload["paper_trading"] = encode(paper_report)
@@ -196,7 +233,19 @@ def main() -> int:
                 count = tick_count
                 errors = list(stream_errors)
                 quotes = dict(latest_ticks)
-            report_path = write_report(scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, paper_report=paper, expired_signals=startup_expired)
+            quote_batch = None
+            try:
+                quote_batch = feed.fetch_full_quotes(max_age_seconds=90.0)
+                errors.extend(quote_batch.errors)
+                if not quote_batch.complete:
+                    errors.append(
+                        "FULL quote snapshot incomplete: "
+                        f"missing={len(quote_batch.missing_symbols)}, stale={len(quote_batch.stale_symbols)}, "
+                        f"unfetched={len(quote_batch.unfetched_tokens)}"
+                    )
+            except Exception as quote_exc:
+                errors.append(f"FULL quote fallback failed: {type(quote_exc).__name__}")
+            report_path = write_report(scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, quote_batch=quote_batch, paper_report=paper, expired_signals=startup_expired)
             print(json.dumps({
                 "as_of": as_of.isoformat(),
                 "refreshed_series_ready": refresh.ready_series,
@@ -242,7 +291,19 @@ def main() -> int:
             count = tick_count
             errors = list(stream_errors)
             quotes = dict(latest_ticks)
-        report_path = write_report(final_scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, paper_report=final_paper, expired_signals=startup_expired + final_expired)
+        quote_batch = None
+        try:
+            quote_batch = feed.fetch_full_quotes(max_age_seconds=90.0)
+            errors.extend(quote_batch.errors)
+            if not quote_batch.complete:
+                errors.append(
+                    "Final FULL quote snapshot incomplete: "
+                    f"missing={len(quote_batch.missing_symbols)}, stale={len(quote_batch.stale_symbols)}, "
+                    f"unfetched={len(quote_batch.unfetched_tokens)}"
+                )
+        except Exception as quote_exc:
+            errors.append(f"Final FULL quote fallback failed: {type(quote_exc).__name__}")
+        report_path = write_report(final_scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, quote_batch=quote_batch, paper_report=final_paper, expired_signals=startup_expired + final_expired)
         print(json.dumps({
             "phase": "POST_SESSION",
             "ready_series": final_refresh.ready_series,
