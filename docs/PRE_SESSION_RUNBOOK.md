@@ -71,3 +71,12 @@ python -m uvicorn dashboard.app:app --host 127.0.0.1 --port 8000
 ~~~
 
 Open http://127.0.0.1:8000 in the browser. Keep it bound to 127.0.0.1; the dashboard has no remote-user authentication and is intended for local use only. It reads the latest session report and verified candle/paper-trade SQLite database. It does not connect to a second market-data vendor or place broker orders.
+
+
+## CAS-aware session readiness
+
+For cash equities with stock-futures contracts, NSE continuous trading ends at 15:15 IST and the separate Closing Auction Session follows until 15:35 IST. The scanner and paper engine must use only continuous-session candles. The 15:15 CAS boundary is distinct from the regular 15:30 close used for non-CAS securities.
+
+Before a reconciliation run, verify that the Angel One instrument master has the expected NFO \`FUTSTK\` mappings. The system derives CAS eligibility from those rows; it does not infer it from NSE EQ symbols. The calendar's \`continuous_close_at\` is effective from 03-Aug-2026, based on NSE circular NSE/CMTR/74466 and the official CAS schedule. See [NSE CAS](https://www.nseindia.com/static/products-services/closing-auction-session).
+
+For a regular CAS-eligible session, expected completed bars are 360 × 1m, 72 × 5m and 24 × 15m. Auction-period timestamps must be excluded from ICT scanning and paper execution. A 15:30-based gap report for a CAS-eligible stock is a calendar-boundary error, not evidence of missing continuous-session data.
