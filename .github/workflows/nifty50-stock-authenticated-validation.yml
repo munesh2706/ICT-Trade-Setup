@@ -13,6 +13,11 @@ on:
         required: true
         default: "eea6c7b2e6ef7ad302092234a8f06191076c3f12"
         type: string
+      run_historical:
+        description: "Run the full 50-stock historical candle reconciliation (takes several minutes)"
+        required: true
+        default: true
+        type: boolean
   push:
     branches:
       - main
@@ -38,6 +43,7 @@ jobs:
       ANGEL_TOTP_SECRET: ${{ secrets.ANGEL_TOTP_SECRET }}
       VALIDATION_DATE: ${{ github.event.inputs.validation_date || '2026-10-30' }}
       SOURCE_REF: ${{ github.event.inputs.source_ref || 'eea6c7b2e6ef7ad302092234a8f06191076c3f12' }}
+      RUN_HISTORICAL: ${{ github.event_name == 'workflow_dispatch' && inputs.run_historical || false }}
 
     steps:
       - name: Check out stock platform source
@@ -59,6 +65,7 @@ jobs:
           python -m pip install -r source/requirements.txt pytest
 
       - name: Verify required GitHub Secrets are available
+        id: secrets
         shell: bash
         run: |
           missing=0
@@ -74,10 +81,13 @@ jobs:
           echo "All four required secret values are present (values are not displayed)."
 
       - name: Run deterministic stock-platform tests
+        id: deterministic_tests
         working-directory: source
         run: python -m pytest -q tests
 
       - name: Authenticate and reconcile all 50 stocks for the selected NSE session
+        id: historical_reconcile
+        if: env.RUN_HISTORICAL == 'true'
         shell: bash
         run: |
           set -o pipefail
@@ -93,6 +103,7 @@ jobs:
             --max-passes 2 | tee "$RUNNER_TEMP/nifty50-historical-report.json"
 
       - name: Validate FULL quotes and live WebSocket when market is open
+        if: always() && steps.secrets.outcome == 'success' && steps.deterministic_tests.outcome == 'success'
         shell: bash
         run: |
           cd source
