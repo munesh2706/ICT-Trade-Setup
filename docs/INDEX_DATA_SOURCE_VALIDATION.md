@@ -59,9 +59,11 @@ These are documented identifiers, **not a substitute for runtime verification**.
 
 The migrated collector is not directly reusable as-is. It assumes NSE cash instruments and a 50-stock mapping. Its exchange validation, token map, calendar, and session assumptions must be replaced with an index-aware design.
 
+**Validation harness defect found and corrected (2026-10-31):** The first harness version incorrectly expected instrument-master `exch_seg` values `nse_cm`/`bse_cm`. Angel One's index-master example uses `NSE` for NIFTY and its published index entries use exchange values `NSE`/`BSE`. The harness now matches `NSE`/`BSE` with `AMXIDX`. The zero-match result from the first run was a validator bug, not evidence that Angel One lacks the instruments.
+
 The ICT data layer must:
 
-1. Resolve each index from the current Angel One instrument master, using exact exchange and index instrument type/name/token fields. Reject missing or ambiguous matches.
+1. Resolve each index from the current Angel One instrument master, using exact exchange (`NSE`/`BSE`, not `nse_cm`/`bse_cm`) and index instrument type/name/token fields. Reject missing or ambiguous matches.
 2. Treat NIFTY and BANKNIFTY as NSE index instruments, and SENSEX as a BSE index instrument.
 3. Use `exchange=NSE` for NIFTY/BANKNIFTY historical candles and `exchange=BSE` for SENSEX historical candles.
 4. Use WebSocket exchangeType 1 for NSE cash and 3 for BSE cash, with the current verified tokens.
