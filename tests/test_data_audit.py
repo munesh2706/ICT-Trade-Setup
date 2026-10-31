@@ -60,3 +60,11 @@ def test_unverified_snapshot_is_not_backtest_readable(tmp_path):
     store.finalize_snapshot("s1", status="ACQUIRED")
     with pytest.raises(ValueError):
         store.load_candles("NIFTY", "1m", "s1")
+def test_wrong_exchange_calendar_rejected_for_index(tmp_path):
+    store = CandleStore(tmp_path / "data.sqlite")
+    store.create_snapshot("s1")
+    store.finalize_snapshot("s1", status="ACQUIRED")
+    bse_session = TradingSession("BSE", DAY, OPEN, CLOSE, "official calendar test")
+    bse_calendar = ExchangeCalendar("BSE", "Asia/Kolkata", DAY, DAY, [bse_session], [], "BSE calendar fixture")
+    with pytest.raises(ValueError):
+        verify_snapshot(store, "s1", {("NIFTY", "1m"): (bse_calendar, [DAY])})
