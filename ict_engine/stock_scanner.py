@@ -264,6 +264,7 @@ def _silver_bullet_signals(
     context: dict,
     scan_date: date,
     as_of: datetime,
+    session,
 ) -> list[StockSignal]:
     if not candles_1m or not levels:
         return []
@@ -272,12 +273,7 @@ def _silver_bullet_signals(
     for window in windows:
         # Only windows overlapping this NSE cash session are applicable.
         # Do not shift New York windows to force a match.
-        session = None
-        # The caller has already validated the date against the NSE calendar;
-        # window overlap is checked against the actual completed bar range.
-        session_start = min(c.timestamp for c in candles_1m)
-        session_end = max(c.timestamp + timedelta(minutes=1) for c in candles_1m)
-        if window.end <= session_start or window.start >= session_end:
+        if window.end <= session.open_at or window.start >= session.close_at:
             continue
         for direction, side in (("bullish", "buy_side"), ("bearish", "sell_side")):
             targets = [x for x in levels if x.side == side]
@@ -304,18 +300,20 @@ def _silver_bullet_signals(
                 continue
             if candidate.fvg_completed_at > as_of or candidate.fvg_completed_at.date() != scan_date:
                 continue
+            retest_time = candles_1m[candidate.retest_candle_index].timestamp + timedelta(minutes=1)
+            if retest_time > as_of:
+                continue
             gap = candidate.fvg
-            available_at = candidate.fvg_completed_at
+            available_at = retest_time
             result.append(StockSignal(
                 _signal_id(symbol, candidate.model, direction, available_at, gap.lower, gap.upper),
                 symbol, company_name, candidate.model, direction, "ENTRY_ARMED",
                 available_at, gap.lower, gap.upper, None, (),
-                "Draw on liquidity: " + candidate.draw_on_liquidity.name,
-                candidate.draw_on_liquidity.price, None, None, None, None,
+                None, None, None, None, None, None,
                 candles_1m[gap.first_candle_index].timestamp,
                 candles_1m[gap.middle_candle_index].timestamp,
                 candles_1m[gap.third_candle_index].timestamp,
-                candles_1m[candidate.retest_candle_index].timestamp + timedelta(minutes=1),
+                retest_time,
                 (candidate.draw_on_liquidity,), context or {},
                 candidate.assumptions + (
                     "New York local window converted with IANA DST rules",
@@ -343,7 +341,10 @@ class StockICTScanner:
             raise ValueError("as_of must be timezone-aware")
         if len(universe.constituents) != 50 or len({x.symbol for x in universe.constituents}) != 50:
             raise ValueError("scanner requires exactly 50 unique NIFTY 50 constituents")
-        if calendar.exchange != "NSE" or calendar.session_for(scan_date) is None:
+        if calendar.exchange != "NSE":
+            raise ValueError("scanner requires the NSE calendar")
+        session = calendar.session_for(scan_date)
+        if session is None:
             raise ValueError("scan_date must be an explicitly configured NSE trading session")
         if as_of.date() != scan_date:
             raise ValueError("as_of date must equal scan_date")
@@ -360,9 +361,32 @@ class StockICTScanner:
             five = _completed(raw_5m, as_of, timedelta(minutes=5))[-self.config.max_5m_lookback_bars:]
             fifteen = _completed(raw_15m, as_of, timedelta(minutes=15))
             latest = one[-1].timestamp if one else None
-            if not one or not five or not fifteen:
+            expected_by_tf = {
+                "1m": [x for x in calendar.expected_candle_starts(scan_date, 1)
+                       if x + timedelta(minutes=1) <= as_of.astimezone(calendar.timezone)],
+                "5m": [x for x in calendar.expected_candle_starts(scan_date, 5)
+                       if x + timedelta(minutes=5) <= as_of.astimezone(calendar.timezone)],
+                "15m": [x for x in calendar.expected_candle_starts(scan_date, 15)
+                        if x + timedelta(minutes=15) <= as_of.astimezone(calendar.timezone)],
+            }
+            observed_by_tf = {
+                "1m": {c.timestamp.astimezone(calendar.timezone) for c in raw_1m},
+                "5m": {c.timestamp.astimezone(calendar.timezone) for c in raw_5m},
+                "15m": {c.timestamp.astimezone(calendar.timezone) for c in raw_15m},
+            }
+            missing_counts = {
+                tf: sum(1 for stamp in expected if stamp not in observed_by_tf[tf])
+                for tf, expected in expected_by_tf.items()
+            }
+            if not one or not five or not fifteen or any(missing_counts.values()):
+                if not any(expected_by_tf.values()):
+                    reason = "waiting for first completed current-session candles"
+                else:
+                    reason = "current-session verified candle gaps: " + ", ".join(
+                        f"{tf}={count}" for tf, count in missing_counts.items() if count
+                    )
                 statuses.append(StockScanStatus(member.symbol, member.company_name, "DATA_NOT_READY",
-                    "verified 1m, 5m and 15m candles are required", len(one), len(five), len(fifteen), latest))
+                    reason, len(one), len(five), len(fifteen), latest))
                 continue
             ready += 1
             current_price = one[-1].close
@@ -377,7 +401,7 @@ class StockICTScanner:
             if self.config.enable_silver_bullet:
                 signals.extend(_silver_bullet_signals(
                     member.symbol, member.company_name, one, levels, context,
-                    scan_date, as_of,
+                    scan_date, as_of, session,
                 ))
             statuses.append(StockScanStatus(member.symbol, member.company_name, "READY",
                 "verified historical data available", len(one), len(five), len(fifteen), latest))
