@@ -2,7 +2,7 @@
   "exchange": "NSE",
   "timezone": "Asia/Kolkata",
   "coverage_start": "2026-01-01",
-  "coverage_end": "2026-10-31",
+  "coverage_end": "2026-11-07",
   "source": "NSE official Market Timings & Holidays 2026 - Equities; regular equity session 09:15–15:30; special Sunday session per NSE circular NSE/FAOP/72352 dated 16-Jan-2026. Muhurat session 08-Nov-2026 is outside coverage because its timings were not yet notified as of 31-Oct-2026.",
   "sessions": [
     {
@@ -1234,6 +1234,36 @@
       "open_at": "2026-10-30T09:15:00+05:30",
       "close_at": "2026-10-30T15:30:00+05:30",
       "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-11-02",
+      "open_at": "2026-11-02T09:15:00+05:30",
+      "close_at": "2026-11-02T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-11-03",
+      "open_at": "2026-11-03T09:15:00+05:30",
+      "close_at": "2026-11-03T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-11-04",
+      "open_at": "2026-11-04T09:15:00+05:30",
+      "close_at": "2026-11-04T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-11-05",
+      "open_at": "2026-11-05T09:15:00+05:30",
+      "close_at": "2026-11-05T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-11-06",
+      "open_at": "2026-11-06T09:15:00+05:30",
+      "close_at": "2026-11-06T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
     }
   ],
   "closed_dates": [
@@ -1335,6 +1365,8 @@
     "2026-10-20",
     "2026-10-24",
     "2026-10-25",
-    "2026-10-31"
+    "2026-10-31",
+    "2026-11-01",
+    "2026-11-07"
   ]
 }
