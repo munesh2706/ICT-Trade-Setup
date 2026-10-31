@@ -11,10 +11,15 @@ on:
       source_ref:
         description: "Feature branch or commit containing the stock platform"
         required: true
-        default: "eea6c7b2e6ef7ad302092234a8f06191076c3f12"
+        default: "ebd9e5bbfb76fba76d591c9f41065571f27a15a6"
         type: string
       run_historical:
         description: "Run the full 50-stock historical candle reconciliation (takes several minutes)"
+        required: true
+        default: true
+        type: boolean
+      run_diagnostic:
+        description: "Compare full-session and split-session historical requests"
         required: true
         default: true
         type: boolean
@@ -44,6 +49,7 @@ jobs:
       VALIDATION_DATE: ${{ github.event.inputs.validation_date || '2026-10-30' }}
       SOURCE_REF: ${{ github.event.inputs.source_ref || 'eea6c7b2e6ef7ad302092234a8f06191076c3f12' }}
       RUN_HISTORICAL: ${{ github.event_name == 'workflow_dispatch' && inputs.run_historical || false }}
+      RUN_DIAGNOSTIC: ${{ github.event_name == 'push' || inputs.run_diagnostic }}
 
     steps:
       - name: Check out stock platform source
@@ -84,6 +90,16 @@ jobs:
         id: deterministic_tests
         working-directory: source
         run: python -m pytest -q tests
+
+      - name: Diagnose Angel One full-session versus split-session candle bounds
+        if: env.RUN_DIAGNOSTIC == 'true'
+        working-directory: source
+        run: |
+          python scripts/diagnose_angelone_intraday_bounds.py \
+            --calendar data/calendars/nse_2026_through_2026-11-07.json \
+            --date "$VALIDATION_DATE" \
+            --output "$RUNNER_TEMP/angelone-session-boundary-diagnostic.json" \
+            --pace-seconds 1.0
 
       - name: Authenticate and reconcile all 50 stocks for the selected NSE session
         id: historical_reconcile
@@ -189,6 +205,7 @@ jobs:
           name: nifty50-authenticated-validation
           path: |
             ${{ runner.temp }}/nifty50-historical-report.json
+            ${{ runner.temp }}/angelone-session-boundary-diagnostic.json
             source/nifty50-authenticated-report.json
           if-no-files-found: warn
           retention-days: 14
