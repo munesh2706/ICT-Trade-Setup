@@ -42,6 +42,16 @@ REPORT_DIR = ROOT / "data" / "reports"
 def result(status: str, **kwargs):
     return {"status": status, **kwargs}
 
+def contains_failure(value):
+    """Return True when any nested validation result has status FAIL."""
+    if isinstance(value, dict):
+        if value.get("status") == "FAIL":
+            return True
+        return any(contains_failure(item) for key, item in value.items() if key != "status")
+    if isinstance(value, list):
+        return any(contains_failure(item) for item in value)
+    return False
+
 
 def load_credentials():
     load_dotenv(ROOT / ".env")
@@ -363,7 +373,7 @@ def main():
         out.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
         print(json.dumps(report, indent=2, default=str))
         print(f"\nSanitized report saved to: {out}")
-        return 0
+        return 1 if contains_failure(report.get("checks", {})) else 0
     except Exception as exc:
         report["fatal_error"] = str(exc)
         report["finished_at_ist"] = datetime.now(IST).isoformat()
