@@ -50,9 +50,13 @@ def main() -> int:
                         choices=["1m", "3m", "5m", "10m", "15m", "30m", "1h", "1d"])
     parser.add_argument("--pace-seconds", type=float, default=1.0)
     parser.add_argument("--max-passes", type=int, default=2)
+    parser.add_argument("--daily-anchor", choices=["session_open", "local_midnight"],
+                        help="Required for 1d because provider daily timestamp anchoring must be verified")
     args = parser.parse_args()
     if args.through_date < args.start_date:
         parser.error("--through-date must be on or after --start-date")
+    if "1d" in args.timeframes and not args.daily_anchor:
+        parser.error("--daily-anchor is required when 1d is selected")
     try:
         calendar = load_calendar(args.calendar)
         if args.start_date < calendar.coverage_start or args.through_date > calendar.coverage_end:
@@ -64,6 +68,8 @@ def main() -> int:
             if calendar.session_for(cursor) is not None:
                 trading_dates.append(cursor)
             cursor = date.fromordinal(cursor.toordinal() + 1)
+        if not trading_dates:
+            raise ValueError("date range contains no explicitly configured NSE trading sessions")
         universe = download_nse_universe()
         universe_path = save_universe_snapshot(universe, args.universe_dir)
         feed = AngelOneStockFeed.connect_from_env(universe, pace_seconds=args.pace_seconds)
@@ -72,7 +78,7 @@ def main() -> int:
         result = reconcile_universe(
             universe=universe, feed=feed, store=store, calendar=calendar,
             trading_dates=trading_dates, timeframes=args.timeframes,
-            max_passes=args.max_passes,
+            max_passes=args.max_passes, daily_anchor=args.daily_anchor,
         )
         summary = {
             "snapshot_id": result.snapshot_id,
