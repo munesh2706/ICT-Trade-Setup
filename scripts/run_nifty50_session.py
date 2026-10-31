@@ -102,9 +102,9 @@ def main() -> int:
         feed = AngelOneStockFeed.connect_from_env(universe, pace_seconds=args.pace_seconds)
         paper_config = load_paper_trading_config(args.paper_config)
         paper_engine = StockPaperTradingEngine(paper_config, feed.instruments)
-        paper_journal = StockPaperStore(args.database)
         args.database.parent.mkdir(parents=True, exist_ok=True)
         store = StockCandleStore(args.database)
+        paper_journal = StockPaperStore(args.database)
 
         completed_sessions = [
             x for x in calendar.sessions_between(args.history_start, now.date())
