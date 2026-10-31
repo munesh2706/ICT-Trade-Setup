@@ -115,9 +115,8 @@ class AngelOneHistoricalFeed:
             except (ValueError, TypeError, InvalidOperation, OverflowError):
                 raise AngelOneFeedError("Historical response contains invalid timestamp or OHLCV values") from None
             candles.append(candle)
-        candles.sort(key=lambda c: c.timestamp)
-        if any(candles[i].timestamp == candles[i + 1].timestamp for i in range(len(candles) - 1)):
-            raise AngelOneFeedError("Historical response contains duplicate candle timestamps")
+        if any(candles[i].timestamp >= candles[i + 1].timestamp for i in range(len(candles) - 1)):
+            raise AngelOneFeedError("Historical response is duplicated or out of chronological order")
         if any(c.timestamp < start or c.timestamp >= end for c in candles):
             raise AngelOneFeedError("Historical response contains candles outside the requested interval")
         return candles
