@@ -9,6 +9,7 @@ data/raw/
 data/cache/
 data/processed/
 data/reports/
+config/paper_trading.json
 *.sqlite
 *.db
 *.log
