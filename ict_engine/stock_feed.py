@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from .models import Candle
 from .stock_universe import (
     ANGEL_MASTER_URL, HEADERS, StockInstrument, UniverseSnapshot,
-    UniverseError, download_angelone_master, resolve_angelone_equities,
+    UniverseError, download_angelone_master, resolve_angelone_equities,\n    resolve_angelone_cas_eligible_symbols,
 )
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -114,14 +114,7 @@ class AngelOneStockFeed:
         try:
             master, digest = download_angelone_master()
             instruments = resolve_angelone_equities(universe, master)
-            universe_symbols = {member.symbol for member in universe.constituents}
-            cas_eligible_symbols = {
-                str(row.get("name", "")).strip().upper()
-                for row in master
-                if str(row.get("exch_seg", "")).strip().upper() == "NFO"
-                and str(row.get("instrumenttype", "")).strip().upper() == "FUTSTK"
-                and str(row.get("name", "")).strip().upper() in universe_symbols
-            }
+            cas_eligible_symbols = resolve_angelone_cas_eligible_symbols(universe, master)
         except UniverseError as exc:
             raise StockFeedError(str(exc)) from None
         return cls(
