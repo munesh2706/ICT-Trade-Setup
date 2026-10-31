@@ -25,6 +25,7 @@ No layer may silently repair missing data or change another layer's source rules
 ## ICT context requirements
 The context layer must be able to represent, without forcing all of them into every model:
 - Prior day/week/month highs and lows.
+- Multi-period liquidity map that lists draws above and below current price without forcing a directional bias.
 - Confirmed swing highs/lows and relative equal highs/lows.
 - Buy-side and sell-side liquidity references and observed raids.
 - Source-defined dealing ranges and equilibrium.
