@@ -67,6 +67,7 @@ def test_scanner_emits_explainable_episode6_candidate_for_individual_stock():
     assert signal.status == "QUALIFIED_WAITING_FOR_FVG_RETRACE"
     assert signal.entry_zone_lower < signal.entry_zone_upper
     assert len(signal.invalidation_references) == 2
+    assert len(signal.context["additional_liquidity_sweeps"]) == 2
 
 def test_scanner_blocks_stock_with_missing_current_session_candle():
     universe, calendar, data = setup_data()
