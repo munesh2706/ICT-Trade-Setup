@@ -52,6 +52,17 @@ class LiquiditySweep:
     direction: str
 
 @dataclass(frozen=True, slots=True)
+class ExternalLiquiditySweep:
+    candle_index: int
+    reference_name: str
+    reference_price: Decimal
+    reference_side: str
+    reference_source: str
+    extreme: Decimal
+    direction: str
+
+
+@dataclass(frozen=True, slots=True)
 class MarketStructureShift:
     candle_index: int
     broken_swing: SwingPoint
@@ -62,7 +73,7 @@ class MarketStructureShift:
 class ICT2022SetupCandidate:
     model: str
     direction: str
-    sweep: LiquiditySweep
+    sweep: LiquiditySweep | ExternalLiquiditySweep
     mss: MarketStructureShift
     fvg: FairValueGap
     entry_reference: Decimal
