@@ -42,3 +42,24 @@ python scripts\pre_session_gate.py --calendar data\calendars\nse_2026_through_20
 ~~~
 
 Use local_midnight instead only if verified against the provider's actual daily response timestamps. The software intentionally refuses to guess.
+
+
+## During the trading session
+
+Refresh completed candles from Angel One Historical API before each scan. Run 1m refresh at the minute cadence, 5m after each completed 5m bar, and 15m after each completed 15m bar:
+
+~~~powershell
+python scripts\refresh_nifty50_live_session.py --calendar data\calendars\nse_2026_through_2026-11-07.json --timeframes 1m
+python scripts\refresh_nifty50_live_session.py --calendar data\calendars\nse_2026_through_2026-11-07.json --timeframes 5m
+python scripts\refresh_nifty50_live_session.py --calendar data\calendars\nse_2026_through_2026-11-07.json --timeframes 15m
+~~~
+
+The live refresh stores each stock/timeframe independently. A stock is eligible for scanning only when its completed current-session 1m, 5m and 15m grids are present in verified storage. The WebSocket V2 feed is for live quote display/monitoring; it is not used to synthesize OHLCV.
+
+Run the scanner after the relevant refreshes:
+
+~~~powershell
+python scripts\scan_nifty50_stocks.py --calendar data\calendars\nse_2026_through_2026-11-07.json
+~~~
+
+The scanner returns a per-stock readiness state and explainable ICT candidates. A stock with missing current-session candles is skipped rather than scanned on stale data. The current CLI emits JSON; the visual dashboard is a subsequent project milestone.
