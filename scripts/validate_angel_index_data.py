@@ -25,7 +25,7 @@ MASTER_URL = "https://margincalculator.angelone.in/OpenAPI_File/files/OpenAPIScr
 INSTRUMENTS = {
     "NIFTY": {"name": "NIFTY 50", "exchange": "NSE", "segment": "NSE",
               "token": "99926000", "ws_exchange_type": 1},
-    "BANKNIFTY": {"name": "BANKNIFTY", "exchange": "NSE", "segment": "nse_cm",
+    "BANKNIFTY": {"name": "BANKNIFTY", "exchange": "NSE", "segment": "NSE",
                   "token": "99926009", "ws_exchange_type": 1},
     "SENSEX": {"name": "SENSEX", "exchange": "BSE", "segment": "BSE",
                "token": "99919000", "ws_exchange_type": 3},
