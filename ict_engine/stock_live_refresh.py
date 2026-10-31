@@ -75,16 +75,19 @@ def refresh_current_session(
         return LiveRefreshReport(scan_date, as_of, ())
 
     reports = []
+    cas_eligible_symbols = getattr(feed, "cas_eligible_symbols", set())
     for timeframe in timeframes:
         interval = INTERVAL_MINUTES[timeframe]
-        expected_all = calendar.expected_candle_starts(scan_date, interval)
-        expected = [stamp for stamp in expected_all if stamp + timedelta(minutes=interval) <= as_of.astimezone(calendar.timezone)]
-        if not expected:
-            continue
-        range_start = expected[0]
-        range_end = expected[-1] + timedelta(minutes=interval)
-
         for member in universe.constituents:
+            cas_eligible = member.symbol in cas_eligible_symbols
+            expected_all = calendar.expected_candle_starts(
+                scan_date, interval, cas_eligible=cas_eligible,
+            )
+            expected = [stamp for stamp in expected_all if stamp + timedelta(minutes=interval) <= as_of.astimezone(calendar.timezone)]
+            if not expected:
+                continue
+            range_start = expected[0]
+            range_end = expected[-1] + timedelta(minutes=interval)
             existing = store.load_reconciliation_candles(
                 member.symbol, timeframe, range_start, range_end, universe.snapshot_id,
             )
