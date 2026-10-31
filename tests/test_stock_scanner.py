@@ -43,19 +43,27 @@ def setup_data():
 class FakeVerifiedStore:
     def __init__(self, data):
         self.data = data
-    def load_verified_candles(self, symbol, timeframe):
-        return list(self.data.get((symbol,timeframe), []))
+        self.calls = []
+    def load_verified_candles(self, symbol, timeframe, start=None, end=None, limit=None):
+        self.calls.append((symbol, timeframe, end, limit))
+        rows = list(self.data.get((symbol,timeframe), []))
+        if start is not None:
+            rows = [x for x in rows if x.timestamp >= start]
+        if end is not None:
+            rows = [x for x in rows if x.timestamp < end]
+        return rows[-limit:] if limit is not None else rows
 
 def test_scanner_emits_explainable_episode6_candidate_for_individual_stock():
     universe, calendar, data = setup_data()
+    as_of = datetime(2026,10,30,10,0,tzinfo=IST)
+    store = FakeVerifiedStore(data)
     report = StockICTScanner(StockICTScanConfig(
         enable_silver_bullet=False, pivot_left=1, pivot_right=1,
         displacement_min_body_to_range=D("0.5"),
         max_bars_after_sweep=3, max_bars_after_mss=3,
     )).scan_universe(
-        universe=universe, store=FakeVerifiedStore(data), calendar=calendar,
-        scan_date=date(2026,10,30),
-        as_of=datetime(2026,10,30,10,0,tzinfo=IST),
+        universe=universe, store=store, calendar=calendar,
+        scan_date=date(2026,10,30), as_of=as_of,
     )
     assert report.total_stocks == 50
     assert report.ready_stocks == 50
@@ -69,6 +77,8 @@ def test_scanner_emits_explainable_episode6_candidate_for_individual_stock():
     assert signal.entry_zone_lower < signal.entry_zone_upper
     assert len(signal.invalidation_references) == 2
     assert len(signal.context["additional_liquidity_sweeps"]) == 2
+    assert len(store.calls) == 150
+    assert all(call[2] == as_of for call in store.calls)
 
 def test_scanner_blocks_stock_with_missing_current_session_candle():
     universe, calendar, data = setup_data()
