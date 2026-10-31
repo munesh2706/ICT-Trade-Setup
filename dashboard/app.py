@@ -45,6 +45,16 @@ def state_payload() -> dict:
     if report is None:
         return {"status": "NO_REPORT", "message": "No session report exists yet. Start the NIFTY 50 session runner.",
                 "as_of": None, "stocks": [], "signals": [], "open_positions": [], "closed_trades": []}
+    now_utc = datetime.now(timezone.utc)
+    report_age_seconds = None
+    try:
+        report_time = datetime.fromisoformat(str(report.get("as_of", "")).replace("Z", "+00:00"))
+        if report_time.tzinfo is not None:
+            report_age_seconds = max(0, int((now_utc - report_time.astimezone(timezone.utc)).total_seconds()))
+    except (TypeError, ValueError):
+        pass
+    stale_after = max(1, int(os.getenv("ICT_REPORT_STALE_SECONDS", "120")))
+    report_stale = report_age_seconds is None or report_age_seconds > stale_after
     paper = report.get("paper_trading") or {}
     live = report.get("live_stream") or {}
     quotes = live.get("quotes") or {}
@@ -62,13 +72,16 @@ def state_payload() -> dict:
                 tick_age = max(0, int((datetime.now(timezone.utc) - quote_time.astimezone(timezone.utc)).total_seconds()))
             except ValueError:
                 pass
+        quote_stale = bool(quote.get("stale", True)) if quote else True
         stocks.append({**row, "quote": quote, "tick_age_seconds": tick_age,
-                       "quote_stale": bool(quote.get("stale", True)) if quote else True,
+                       "quote_stale": quote_stale,
                        "quote_source": quote.get("source") if quote else None,
                        "signals_count": len(signals_by_symbol.get(symbol, []))})
     journal = paper_store()
     open_positions = []
     for position in journal.load_open_positions():
+        position_quote = quotes.get(position.instrument_id)
+        position_quote_fresh = bool(position_quote) and not bool(position_quote.get("stale", True))
         open_positions.append({
             "position_id": position.position_id,
             "signal_id": journal.position_signal_id(position.position_id),
@@ -76,20 +89,23 @@ def state_payload() -> dict:
             "direction": position.direction, "entry_time": position.entry_time.isoformat(),
             "entry_price": str(position.entry_price), "stop": str(position.stop),
             "target": str(position.target), "quantity": str(position.quantity),
-            "ltp": quotes.get(position.instrument_id, {}).get("ltp"),
-            "quote_received_at": quotes.get(position.instrument_id, {}).get("received_at"),
+            "ltp": position_quote.get("ltp") if position_quote else None,
+            "quote_received_at": position_quote.get("received_at") if position_quote else None,
+            "quote_stale": not position_quote_fresh,
             "unrealized_gross_pnl": (
-                str((Decimal(quotes[position.instrument_id]["ltp"]) - position.entry_price) * position.quantity
+                str((Decimal(position_quote["ltp"]) - position.entry_price) * position.quantity
                     if position.direction == "long" else
-                    (position.entry_price - Decimal(quotes[position.instrument_id]["ltp"])) * position.quantity)
-                if position.instrument_id in quotes else None
+                    (position.entry_price - Decimal(position_quote["ltp"])) * position.quantity)
+                if position_quote_fresh and position_quote.get("ltp") is not None else None
             ),
         })
     closed_trades = journal.closed_trade_rows()
     closed_today = [row for row in closed_trades
                     if str(row.get("exit_time", ""))[:10] == str(report.get("scan_date", ""))]
     return {
-        "status": "OK", "as_of": report.get("as_of"), "scan_date": report.get("scan_date"),
+        "status": "STALE" if report_stale else "OK", "as_of": report.get("as_of"),
+        "report_age_seconds": report_age_seconds, "report_stale": report_stale,
+        "scan_date": report.get("scan_date"),
         "universe_snapshot_id": report.get("universe_snapshot_id"),
         "overview": {
             "total_stocks": report.get("total_stocks", 50), "ready_stocks": report.get("ready_stocks", 0),
@@ -151,7 +167,18 @@ def api_closed_trades(limit: int = Query(100, ge=1, le=1000)):
 @app.get("/api/health")
 def api_health():
     report = latest_report()
-    return {"status": "OK" if report else "WAITING", "database_exists": DATABASE.exists(),
-            "reports_directory_exists": REPORTS.exists(),
+    report_age_seconds = None
+    if report:
+        try:
+            report_time = datetime.fromisoformat(str(report.get("as_of", "")).replace("Z", "+00:00"))
+            if report_time.tzinfo is not None:
+                report_age_seconds = max(0, int((datetime.now(timezone.utc) - report_time.astimezone(timezone.utc)).total_seconds()))
+        except (TypeError, ValueError):
+            pass
+    stale_after = max(1, int(os.getenv("ICT_REPORT_STALE_SECONDS", "120")))
+    report_stale = report_age_seconds is None or report_age_seconds > stale_after if report else False
+    return {"status": "WAITING" if not report else ("STALE" if report_stale else "OK"),
+            "database_exists": DATABASE.exists(), "reports_directory_exists": REPORTS.exists(),
             "latest_report_as_of": report.get("as_of") if report else None,
-            "generated_at": datetime.now(timezone.utc).isoformat()}
+            "report_age_seconds": report_age_seconds, "report_stale": report_stale,
+            "stale_after_seconds": stale_after, "generated_at": datetime.now(timezone.utc).isoformat()}
