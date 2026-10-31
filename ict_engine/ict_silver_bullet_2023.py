@@ -5,13 +5,13 @@ on liquidity. It does not manufacture a bias from the FVG itself.
 """
 from __future__ import annotations
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from typing import Literal, Sequence
 
 from .context import LiquidityLevel
 from .models import Candle, FairValueGap
-from .sessions import SessionWindow
+from .sessions import NEW_YORK, SessionWindow
 from .ict_2022_episode6 import fair_value_gaps
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +57,14 @@ def detect_silver_bullet_candidate(
         raise ValueError("window boundaries must be timezone-aware")
     if window.end <= window.start:
         raise ValueError("window end must be after start")
+    expected_windows = {"london_open": (time(3, 0), time(4, 0)), "new_york_am": (time(10, 0), time(11, 0)), "new_york_pm": (time(14, 0), time(15, 0))}
+    if window.name not in expected_windows:
+        raise ValueError("window name is not one of the source-defined Silver Bullet windows")
+    start_ny = window.start.astimezone(NEW_YORK)
+    end_ny = window.end.astimezone(NEW_YORK)
+    expected_start, expected_end = expected_windows[window.name]
+    if start_ny.date() != end_ny.date() or start_ny.time() != expected_start or end_ny.time() != expected_end:
+        raise ValueError("window boundaries do not match the source-defined New York-local window")
     if not candles:
         return None
     if any(c.timestamp.tzinfo is None for c in candles):
