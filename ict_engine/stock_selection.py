@@ -189,43 +189,43 @@ def _score_rows(rows: list[dict[str, Any]]) -> None:
             "momentum": pct["momentum"][symbol],
             "market_structure_proxy": pct["structure"][symbol],
         }
-        bullish = (
+        directional_bull = (
             components["relative_strength_vs_basket"] * 0.15
             + components["relative_strength_vs_industry"] * 0.10
             + components["industry_strength"] * 0.10
             + components["industry_breadth"] * 0.05
             + components["industry_persistence"] * 0.05
-            + components["relative_volume"] * 0.20
             + components["momentum"] * 0.15
             + components["market_structure_proxy"] * 0.20
-        )
-        bearish = (
-            (100.0 - components["relative_strength_vs_basket"]) * 0.15
-            + (100.0 - components["relative_strength_vs_industry"]) * 0.10
-            + (100.0 - components["industry_strength"]) * 0.10
-            + (100.0 - components["industry_breadth"]) * 0.05
-            + (100.0 - components["industry_persistence"]) * 0.05
-            + components["relative_volume"] * 0.20
-            + (100.0 - components["momentum"]) * 0.15
-            + (100.0 - components["market_structure_proxy"]) * 0.20
-        )
+        ) / 0.80
+        directional_bear = 100.0 - directional_bull
+        # RVOL is a 20% activity-confidence modifier, not a directional vote.
+        # High volume alone cannot qualify a directionally neutral stock.
+        rvol_confidence = components["relative_volume"]
+        bullish = directional_bull * 0.80 + rvol_confidence * 0.20
+        bearish = directional_bear * 0.80 + rvol_confidence * 0.20
         row["components"] = {k: round(v, 2) for k, v in components.items()}
+        row["bullish_bias_score"] = round(directional_bull, 2)
+        row["bearish_bias_score"] = round(directional_bear, 2)
         row["bullish_score"] = round(bullish, 2)
         row["bearish_score"] = round(bearish, 2)
-        row["best_direction"] = "bullish" if bullish >= bearish else "bearish"
-        row["best_score"] = max(bullish, bearish)
+        row["best_direction"] = "bullish" if directional_bull >= directional_bear else "bearish"
+        row["best_score"] = bullish if row["best_direction"] == "bullish" else bearish
         if not row["industry_peers"]:
             row["industry_note"] = "Single-member NSE industry group; peer-relative component is neutral."
 
 
 def _apply_stability(ranked: list[dict[str, Any]], previous: list[dict[str, Any]],
                      *, min_score: float, replacement_margin: float,
-                     as_of: datetime, max_selected: int = 4) -> list[dict[str, Any]]:
+                     as_of: datetime, max_selected: int = 4,
+                     minimum_directional_bias: float = 55.0) -> list[dict[str, Any]]:
     by_symbol = {row["symbol"]: row for row in ranked if row.get("eligible")}
     selected: list[dict[str, Any]] = []
     for direction, score_key in (("bullish", "bullish_score"), ("bearish", "bearish_score")):
         pool = sorted(
-            (row for row in by_symbol.values() if row[score_key] >= min_score),
+            (row for row in by_symbol.values()
+             if row[score_key] >= min_score
+             and row.get(f"{direction}_bias_score", 100.0) >= minimum_directional_bias),
             key=lambda row: (-row[score_key], row["symbol"]),
         )
         picks = pool[:2]
@@ -233,6 +233,7 @@ def _apply_stability(ranked: list[dict[str, Any]], previous: list[dict[str, Any]
             item for item in previous
             if item.get("direction") == direction and item.get("symbol") in by_symbol
             and by_symbol[item["symbol"]][score_key] >= min_score
+            and by_symbol[item["symbol"]].get(f"{direction}_bias_score", 100.0) >= minimum_directional_bias
         ]
         for old in previous_side:
             old_row = by_symbol[old["symbol"]]
@@ -257,7 +258,9 @@ def _apply_stability(ranked: list[dict[str, Any]], previous: list[dict[str, Any]
     counts = {side: sum(x["direction"] == side for x in selected) for side in ("bullish", "bearish")}
     remaining = []
     for row in by_symbol.values():
-        if row["best_score"] < min_score or any(x["symbol"] == row["symbol"] for x in selected):
+        if (row["best_score"] < min_score
+                or row.get(f"{row['best_direction']}_bias_score", 100.0) < minimum_directional_bias
+                or any(x["symbol"] == row["symbol"] for x in selected)):
             continue
         direction = row["best_direction"]
         if counts[direction] < 3:
@@ -288,6 +291,7 @@ def rank_and_select_stocks(
     previous_selection: list[dict[str, Any]] | None = None,
     minimum_score: float = 60.0,
     replacement_margin: float = 8.0,
+    minimum_directional_bias: float = 55.0,
 ) -> dict[str, Any]:
     """Rank all constituents and choose a stable balanced watchlist.
 
@@ -297,7 +301,8 @@ def rank_and_select_stocks(
     """
     if as_of.tzinfo is None or as_of.utcoffset() is None:
         raise ValueError("as_of must be timezone-aware")
-    if minimum_score < 0 or minimum_score > 100 or replacement_margin < 0:
+    if (minimum_score < 0 or minimum_score > 100 or replacement_margin < 0
+            or minimum_directional_bias < 50 or minimum_directional_bias > 100):
         raise ValueError("invalid stock-selection thresholds")
     if len(universe.constituents) != 50:
         raise ValueError("stock selection requires exactly 50 constituents")
@@ -316,6 +321,7 @@ def rank_and_select_stocks(
         selected = _apply_stability(
             valid, previous_selection or [], min_score=minimum_score,
             replacement_margin=replacement_margin, as_of=as_of,
+            minimum_directional_bias=minimum_directional_bias,
         )
         status = "OK" if selected else "NO_QUALIFIED_CANDIDATES"
     else:
@@ -341,6 +347,7 @@ def rank_and_select_stocks(
         "refresh_minutes": 15, "target_bullish": 2, "target_bearish": 2,
         "max_selected": 4, "minimum_score": minimum_score,
         "replacement_margin": replacement_margin,
+        "minimum_directional_bias": minimum_directional_bias,
         "universe_coverage": len(valid), "universe_size": 50,
         "selected": selected, "ranking": ranked,
         "methodology": {

@@ -32,6 +32,15 @@ def test_balanced_selection_targets_two_each_and_does_not_force_weak_candidates(
                             as_of=datetime(2026,10,30,10,30,tzinfo=IST)) == []
 
 
+def test_high_rvol_cannot_make_directionally_neutral_stock_eligible():
+    now = datetime(2026,10,30,10,45,tzinfo=IST)
+    neutral = _row("NEUTRAL", 60, 60)
+    neutral["bullish_bias_score"] = 50
+    neutral["bearish_bias_score"] = 50
+    selected = _apply_stability([neutral], [], min_score=60, replacement_margin=8, as_of=now)
+    assert selected == []
+
+
 def test_selection_retains_existing_stock_until_challenger_clears_margin():
     now = datetime(2026,10,30,10,45,tzinfo=IST)
     ranked = [_row("OLD",76,24),_row("NEW",80,20),_row("NEW2",90,10),
