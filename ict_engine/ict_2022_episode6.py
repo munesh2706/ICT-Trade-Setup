@@ -84,11 +84,16 @@ def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivo
             strength = _body_to_range(candle)
             if not breaks or strength < displacement_min_body_to_range:
                 continue
-            eligible_gaps = [g for g in gaps if g.direction == direction and sweep.candle_index <= g.third_candle_index <= j and g.first_candle_index >= sweep.candle_index]
+            eligible_gaps = [g for g in gaps if g.direction == direction and g.first_candle_index >= sweep.candle_index and g.middle_candle_index <= j <= g.third_candle_index]
             if eligible_gaps:
                 gap = eligible_gaps[-1]
                 entry = gap.lower if direction == "bearish" else gap.upper
-                invalidation = candles[gap.first_candle_index].high if direction == "bearish" else candles[gap.first_candle_index].low
+                # The lesson gives two stop-placement variants: beyond candle 1 or candle 2.
+                # Preserve both references instead of silently selecting one.
+                if direction == "bearish":
+                    invalidations = (candles[gap.first_candle_index].high, candles[gap.middle_candle_index].high)
+                else:
+                    invalidations = (candles[gap.first_candle_index].low, candles[gap.middle_candle_index].low)
                 mss = MarketStructureShift(j, broken, direction, strength)
                 results.append(ICT2022SetupCandidate(
                     model="ICT_2022_Mentorship_Episode_6", direction=direction,
@@ -97,5 +102,10 @@ def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivo
                     source_id="ICT-2022-Mentorship-Episode-6-2022-02-04",
                     assumptions=(f"pivot_left={pivot_left}, pivot_right={pivot_right}", f"displacement_min_body_to_range={displacement_min_body_to_range}", "strict unique local pivots are an engineering definition", "entry/invalidation references require a selected execution variant"),
                 ))
-            break
+            # The MSS is the first qualifying displacement break. Continue only
+            # until its three-candle FVG is complete; do not accept a later, unrelated gap.
+            if j >= sweep.candle_index + 3:
+                completed = [g for g in gaps if g.direction == direction and g.first_candle_index >= sweep.candle_index and g.middle_candle_index <= j <= g.third_candle_index]
+                if completed:
+                    break
     return results
