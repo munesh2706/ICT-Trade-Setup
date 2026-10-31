@@ -73,4 +73,9 @@ def process_position_bar(position: PaperPosition, candle: Candle, *, bar_duratio
     gross = points * position.quantity * position.point_value
     fees = position.round_trip_fees_per_unit * position.quantity
     slippage = position.round_trip_slippage_points * position.quantity * position.point_value
-    return PaperExit(position.position_id, candle.timestamp + bar_duration, barrier.reason, barrier.price, gross, fees, slippage, gross - fees - slippage, barrier.ambiguous_bar, barrier.gap_through_stop)
+    exit_time = candle.timestamp + bar_duration
+    net = gross - fees - slippage
+    initial_risk = abs(position.entry_price - position.stop) * position.quantity * position.point_value + fees + slippage
+    r_multiple = net / initial_risk
+    duration_minutes = int((exit_time - position.entry_time).total_seconds() / 60)
+    return PaperExit(position.position_id, exit_time, barrier.reason, barrier.price, gross, fees, slippage, net, barrier.ambiguous_bar, barrier.gap_through_stop, r_multiple, duration_minutes)
