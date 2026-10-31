@@ -23,11 +23,11 @@ from dotenv import load_dotenv
 IST = ZoneInfo("Asia/Kolkata")
 MASTER_URL = "https://margincalculator.angelone.in/OpenAPI_File/files/OpenAPIScripMaster.json"
 INSTRUMENTS = {
-    "NIFTY": {"name": "NIFTY 50", "exchange": "NSE", "segment": "nse_cm",
+    "NIFTY": {"name": "NIFTY 50", "exchange": "NSE", "segment": "NSE",
               "token": "99926000", "ws_exchange_type": 1},
     "BANKNIFTY": {"name": "BANKNIFTY", "exchange": "NSE", "segment": "nse_cm",
                   "token": "99926009", "ws_exchange_type": 1},
-    "SENSEX": {"name": "SENSEX", "exchange": "BSE", "segment": "bse_cm",
+    "SENSEX": {"name": "SENSEX", "exchange": "BSE", "segment": "BSE",
                "token": "99919000", "ws_exchange_type": 3},
 }
 INTERVALS = {
@@ -77,7 +77,7 @@ def fetch_master():
         matches = [
             row for row in rows
             if str(row.get("token", "")) == expected["token"]
-            and str(row.get("exch_seg", "")).lower() == expected["segment"]
+            and str(row.get("exch_seg", "")).upper() == expected["segment"]
             and str(row.get("instrumenttype", "")).upper() == "AMXIDX"
         ]
         if len(matches) != 1:
