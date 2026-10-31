@@ -17,7 +17,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.reconcile_nifty50_history import load_calendar
-from ict_engine.stock_feed import AngelOneStockFeed
+from ict_engine.stock_feed import INTERVAL_MINUTES, AngelOneStockFeed
 from ict_engine.stock_universe import download_nse_universe
 
 TIMEFRAMES = ("1m", "5m", "15m")
@@ -68,10 +68,18 @@ def main() -> int:
         full = feed.fetch_candles(symbol, timeframe, open_at, close_at)
         first = feed.fetch_candles(symbol, timeframe, open_at, split_at)
         second = feed.fetch_candles(symbol, timeframe, split_at, close_at)
+        expected = {
+            stamp.isoformat()
+            for stamp in calendar.expected_candle_starts(args.date, INTERVAL_MINUTES[timeframe])
+        }
         full_stamps = {row.timestamp.isoformat() for row in full}
         split_rows = first + second
         split_stamps = {row.timestamp.isoformat() for row in split_rows}
         report["timeframes"][timeframe] = {
+            "expected_count": len(expected),
+            "missing_from_full": sorted(expected - full_stamps),
+            "unexpected_in_full": sorted(full_stamps - expected),
+            "missing_from_split_union": sorted(expected - split_stamps),
             "full_session": describe(full),
             "first_segment": describe(first),
             "second_segment": describe(second),
