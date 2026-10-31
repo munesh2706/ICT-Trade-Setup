@@ -144,9 +144,11 @@ def run_backtest(args) -> dict:
     engine = StockPaperTradingEngine(paper_config, feed.instruments)
     scanner = StockICTScanner(StockICTScanConfig(enable_silver_bullet=not args.disable_silver_bullet))
     scan_count = 0
+    all_cas_eligible = set(feed.instruments) <= feed.cas_eligible_symbols
     for session in replay_sessions:
         as_of = _first_scan_time(session)
-        close_at = (session.continuous_close_at or session.close_at).astimezone(IST)
+        session_close = session.continuous_close_at if all_cas_eligible and session.continuous_close_at else session.close_at
+        close_at = session_close.astimezone(IST)
         if as_of > close_at:
             raise ValueError(
                 f"session {session.trading_date} closes before the scanner's 15-minute context warm-up completes"
