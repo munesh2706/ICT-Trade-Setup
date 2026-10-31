@@ -64,7 +64,8 @@ def test_scanner_emits_explainable_episode6_candidate_for_individual_stock():
     assert signal.symbol == "SYM00"
     assert signal.model_id == "ICT_2022_Mentorship_Episode_6"
     assert signal.direction == "bearish"
-    assert signal.status == "QUALIFIED_WAITING_FOR_FVG_RETRACE"
+    assert signal.status == "ENTRY_ARMED"
+    assert signal.retest_time is None
     assert signal.entry_zone_lower < signal.entry_zone_upper
     assert len(signal.invalidation_references) == 2
     assert len(signal.context["additional_liquidity_sweeps"]) == 2
