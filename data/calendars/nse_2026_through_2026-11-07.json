@@ -1,0 +1,1372 @@
+{
+  "exchange": "NSE",
+  "timezone": "Asia/Kolkata",
+  "coverage_start": "2026-01-01",
+  "coverage_end": "2026-11-07",
+  "source": "NSE official Market Timings & Holidays 2026 - Equities; regular equity session 09:15–15:30; special Sunday session per NSE circular NSE/FAOP/72352 dated 16-Jan-2026. Muhurat session 08-Nov-2026 is outside coverage because its timings were not yet notified as of 31-Oct-2026.",
+  "sessions": [
+    {
+      "date": "2026-01-01",
+      "open_at": "2026-01-01T09:15:00+05:30",
+      "close_at": "2026-01-01T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-02",
+      "open_at": "2026-01-02T09:15:00+05:30",
+      "close_at": "2026-01-02T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-05",
+      "open_at": "2026-01-05T09:15:00+05:30",
+      "close_at": "2026-01-05T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-06",
+      "open_at": "2026-01-06T09:15:00+05:30",
+      "close_at": "2026-01-06T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-07",
+      "open_at": "2026-01-07T09:15:00+05:30",
+      "close_at": "2026-01-07T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-08",
+      "open_at": "2026-01-08T09:15:00+05:30",
+      "close_at": "2026-01-08T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-09",
+      "open_at": "2026-01-09T09:15:00+05:30",
+      "close_at": "2026-01-09T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-12",
+      "open_at": "2026-01-12T09:15:00+05:30",
+      "close_at": "2026-01-12T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-13",
+      "open_at": "2026-01-13T09:15:00+05:30",
+      "close_at": "2026-01-13T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-14",
+      "open_at": "2026-01-14T09:15:00+05:30",
+      "close_at": "2026-01-14T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-16",
+      "open_at": "2026-01-16T09:15:00+05:30",
+      "close_at": "2026-01-16T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-19",
+      "open_at": "2026-01-19T09:15:00+05:30",
+      "close_at": "2026-01-19T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-20",
+      "open_at": "2026-01-20T09:15:00+05:30",
+      "close_at": "2026-01-20T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-21",
+      "open_at": "2026-01-21T09:15:00+05:30",
+      "close_at": "2026-01-21T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-22",
+      "open_at": "2026-01-22T09:15:00+05:30",
+      "close_at": "2026-01-22T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-23",
+      "open_at": "2026-01-23T09:15:00+05:30",
+      "close_at": "2026-01-23T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-27",
+      "open_at": "2026-01-27T09:15:00+05:30",
+      "close_at": "2026-01-27T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-28",
+      "open_at": "2026-01-28T09:15:00+05:30",
+      "close_at": "2026-01-28T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-29",
+      "open_at": "2026-01-29T09:15:00+05:30",
+      "close_at": "2026-01-29T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-01-30",
+      "open_at": "2026-01-30T09:15:00+05:30",
+      "close_at": "2026-01-30T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-01",
+      "open_at": "2026-02-01T09:15:00+05:30",
+      "close_at": "2026-02-01T15:30:00+05:30",
+      "source": "NSE circular FAOP72352 (16-Jan-2026), Sunday budget live session; normal equity hours"
+    },
+    {
+      "date": "2026-02-02",
+      "open_at": "2026-02-02T09:15:00+05:30",
+      "close_at": "2026-02-02T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-03",
+      "open_at": "2026-02-03T09:15:00+05:30",
+      "close_at": "2026-02-03T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-04",
+      "open_at": "2026-02-04T09:15:00+05:30",
+      "close_at": "2026-02-04T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-05",
+      "open_at": "2026-02-05T09:15:00+05:30",
+      "close_at": "2026-02-05T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-06",
+      "open_at": "2026-02-06T09:15:00+05:30",
+      "close_at": "2026-02-06T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-09",
+      "open_at": "2026-02-09T09:15:00+05:30",
+      "close_at": "2026-02-09T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-10",
+      "open_at": "2026-02-10T09:15:00+05:30",
+      "close_at": "2026-02-10T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-11",
+      "open_at": "2026-02-11T09:15:00+05:30",
+      "close_at": "2026-02-11T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-12",
+      "open_at": "2026-02-12T09:15:00+05:30",
+      "close_at": "2026-02-12T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-13",
+      "open_at": "2026-02-13T09:15:00+05:30",
+      "close_at": "2026-02-13T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-16",
+      "open_at": "2026-02-16T09:15:00+05:30",
+      "close_at": "2026-02-16T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-17",
+      "open_at": "2026-02-17T09:15:00+05:30",
+      "close_at": "2026-02-17T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-18",
+      "open_at": "2026-02-18T09:15:00+05:30",
+      "close_at": "2026-02-18T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-19",
+      "open_at": "2026-02-19T09:15:00+05:30",
+      "close_at": "2026-02-19T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-20",
+      "open_at": "2026-02-20T09:15:00+05:30",
+      "close_at": "2026-02-20T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-23",
+      "open_at": "2026-02-23T09:15:00+05:30",
+      "close_at": "2026-02-23T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-24",
+      "open_at": "2026-02-24T09:15:00+05:30",
+      "close_at": "2026-02-24T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-25",
+      "open_at": "2026-02-25T09:15:00+05:30",
+      "close_at": "2026-02-25T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-26",
+      "open_at": "2026-02-26T09:15:00+05:30",
+      "close_at": "2026-02-26T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-02-27",
+      "open_at": "2026-02-27T09:15:00+05:30",
+      "close_at": "2026-02-27T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-02",
+      "open_at": "2026-03-02T09:15:00+05:30",
+      "close_at": "2026-03-02T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-04",
+      "open_at": "2026-03-04T09:15:00+05:30",
+      "close_at": "2026-03-04T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-05",
+      "open_at": "2026-03-05T09:15:00+05:30",
+      "close_at": "2026-03-05T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-06",
+      "open_at": "2026-03-06T09:15:00+05:30",
+      "close_at": "2026-03-06T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-09",
+      "open_at": "2026-03-09T09:15:00+05:30",
+      "close_at": "2026-03-09T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-10",
+      "open_at": "2026-03-10T09:15:00+05:30",
+      "close_at": "2026-03-10T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-11",
+      "open_at": "2026-03-11T09:15:00+05:30",
+      "close_at": "2026-03-11T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-12",
+      "open_at": "2026-03-12T09:15:00+05:30",
+      "close_at": "2026-03-12T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-13",
+      "open_at": "2026-03-13T09:15:00+05:30",
+      "close_at": "2026-03-13T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-16",
+      "open_at": "2026-03-16T09:15:00+05:30",
+      "close_at": "2026-03-16T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-17",
+      "open_at": "2026-03-17T09:15:00+05:30",
+      "close_at": "2026-03-17T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-18",
+      "open_at": "2026-03-18T09:15:00+05:30",
+      "close_at": "2026-03-18T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-19",
+      "open_at": "2026-03-19T09:15:00+05:30",
+      "close_at": "2026-03-19T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-20",
+      "open_at": "2026-03-20T09:15:00+05:30",
+      "close_at": "2026-03-20T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-23",
+      "open_at": "2026-03-23T09:15:00+05:30",
+      "close_at": "2026-03-23T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-24",
+      "open_at": "2026-03-24T09:15:00+05:30",
+      "close_at": "2026-03-24T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-25",
+      "open_at": "2026-03-25T09:15:00+05:30",
+      "close_at": "2026-03-25T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-27",
+      "open_at": "2026-03-27T09:15:00+05:30",
+      "close_at": "2026-03-27T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-03-30",
+      "open_at": "2026-03-30T09:15:00+05:30",
+      "close_at": "2026-03-30T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-01",
+      "open_at": "2026-04-01T09:15:00+05:30",
+      "close_at": "2026-04-01T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-02",
+      "open_at": "2026-04-02T09:15:00+05:30",
+      "close_at": "2026-04-02T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-06",
+      "open_at": "2026-04-06T09:15:00+05:30",
+      "close_at": "2026-04-06T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-07",
+      "open_at": "2026-04-07T09:15:00+05:30",
+      "close_at": "2026-04-07T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-08",
+      "open_at": "2026-04-08T09:15:00+05:30",
+      "close_at": "2026-04-08T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-09",
+      "open_at": "2026-04-09T09:15:00+05:30",
+      "close_at": "2026-04-09T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-10",
+      "open_at": "2026-04-10T09:15:00+05:30",
+      "close_at": "2026-04-10T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-13",
+      "open_at": "2026-04-13T09:15:00+05:30",
+      "close_at": "2026-04-13T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-15",
+      "open_at": "2026-04-15T09:15:00+05:30",
+      "close_at": "2026-04-15T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-16",
+      "open_at": "2026-04-16T09:15:00+05:30",
+      "close_at": "2026-04-16T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-17",
+      "open_at": "2026-04-17T09:15:00+05:30",
+      "close_at": "2026-04-17T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-20",
+      "open_at": "2026-04-20T09:15:00+05:30",
+      "close_at": "2026-04-20T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-21",
+      "open_at": "2026-04-21T09:15:00+05:30",
+      "close_at": "2026-04-21T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-22",
+      "open_at": "2026-04-22T09:15:00+05:30",
+      "close_at": "2026-04-22T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-23",
+      "open_at": "2026-04-23T09:15:00+05:30",
+      "close_at": "2026-04-23T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-24",
+      "open_at": "2026-04-24T09:15:00+05:30",
+      "close_at": "2026-04-24T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-27",
+      "open_at": "2026-04-27T09:15:00+05:30",
+      "close_at": "2026-04-27T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-28",
+      "open_at": "2026-04-28T09:15:00+05:30",
+      "close_at": "2026-04-28T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-29",
+      "open_at": "2026-04-29T09:15:00+05:30",
+      "close_at": "2026-04-29T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-04-30",
+      "open_at": "2026-04-30T09:15:00+05:30",
+      "close_at": "2026-04-30T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-04",
+      "open_at": "2026-05-04T09:15:00+05:30",
+      "close_at": "2026-05-04T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-05",
+      "open_at": "2026-05-05T09:15:00+05:30",
+      "close_at": "2026-05-05T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-06",
+      "open_at": "2026-05-06T09:15:00+05:30",
+      "close_at": "2026-05-06T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-07",
+      "open_at": "2026-05-07T09:15:00+05:30",
+      "close_at": "2026-05-07T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-08",
+      "open_at": "2026-05-08T09:15:00+05:30",
+      "close_at": "2026-05-08T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-11",
+      "open_at": "2026-05-11T09:15:00+05:30",
+      "close_at": "2026-05-11T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-12",
+      "open_at": "2026-05-12T09:15:00+05:30",
+      "close_at": "2026-05-12T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-13",
+      "open_at": "2026-05-13T09:15:00+05:30",
+      "close_at": "2026-05-13T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-14",
+      "open_at": "2026-05-14T09:15:00+05:30",
+      "close_at": "2026-05-14T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-15",
+      "open_at": "2026-05-15T09:15:00+05:30",
+      "close_at": "2026-05-15T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-18",
+      "open_at": "2026-05-18T09:15:00+05:30",
+      "close_at": "2026-05-18T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-19",
+      "open_at": "2026-05-19T09:15:00+05:30",
+      "close_at": "2026-05-19T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-20",
+      "open_at": "2026-05-20T09:15:00+05:30",
+      "close_at": "2026-05-20T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-21",
+      "open_at": "2026-05-21T09:15:00+05:30",
+      "close_at": "2026-05-21T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-22",
+      "open_at": "2026-05-22T09:15:00+05:30",
+      "close_at": "2026-05-22T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-25",
+      "open_at": "2026-05-25T09:15:00+05:30",
+      "close_at": "2026-05-25T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-26",
+      "open_at": "2026-05-26T09:15:00+05:30",
+      "close_at": "2026-05-26T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-27",
+      "open_at": "2026-05-27T09:15:00+05:30",
+      "close_at": "2026-05-27T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-05-29",
+      "open_at": "2026-05-29T09:15:00+05:30",
+      "close_at": "2026-05-29T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-01",
+      "open_at": "2026-06-01T09:15:00+05:30",
+      "close_at": "2026-06-01T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-02",
+      "open_at": "2026-06-02T09:15:00+05:30",
+      "close_at": "2026-06-02T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-03",
+      "open_at": "2026-06-03T09:15:00+05:30",
+      "close_at": "2026-06-03T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-04",
+      "open_at": "2026-06-04T09:15:00+05:30",
+      "close_at": "2026-06-04T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-05",
+      "open_at": "2026-06-05T09:15:00+05:30",
+      "close_at": "2026-06-05T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-08",
+      "open_at": "2026-06-08T09:15:00+05:30",
+      "close_at": "2026-06-08T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-09",
+      "open_at": "2026-06-09T09:15:00+05:30",
+      "close_at": "2026-06-09T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-10",
+      "open_at": "2026-06-10T09:15:00+05:30",
+      "close_at": "2026-06-10T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-11",
+      "open_at": "2026-06-11T09:15:00+05:30",
+      "close_at": "2026-06-11T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-12",
+      "open_at": "2026-06-12T09:15:00+05:30",
+      "close_at": "2026-06-12T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-15",
+      "open_at": "2026-06-15T09:15:00+05:30",
+      "close_at": "2026-06-15T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-16",
+      "open_at": "2026-06-16T09:15:00+05:30",
+      "close_at": "2026-06-16T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-17",
+      "open_at": "2026-06-17T09:15:00+05:30",
+      "close_at": "2026-06-17T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-18",
+      "open_at": "2026-06-18T09:15:00+05:30",
+      "close_at": "2026-06-18T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-19",
+      "open_at": "2026-06-19T09:15:00+05:30",
+      "close_at": "2026-06-19T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-22",
+      "open_at": "2026-06-22T09:15:00+05:30",
+      "close_at": "2026-06-22T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-23",
+      "open_at": "2026-06-23T09:15:00+05:30",
+      "close_at": "2026-06-23T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-24",
+      "open_at": "2026-06-24T09:15:00+05:30",
+      "close_at": "2026-06-24T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-25",
+      "open_at": "2026-06-25T09:15:00+05:30",
+      "close_at": "2026-06-25T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-29",
+      "open_at": "2026-06-29T09:15:00+05:30",
+      "close_at": "2026-06-29T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-06-30",
+      "open_at": "2026-06-30T09:15:00+05:30",
+      "close_at": "2026-06-30T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-01",
+      "open_at": "2026-07-01T09:15:00+05:30",
+      "close_at": "2026-07-01T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-02",
+      "open_at": "2026-07-02T09:15:00+05:30",
+      "close_at": "2026-07-02T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-03",
+      "open_at": "2026-07-03T09:15:00+05:30",
+      "close_at": "2026-07-03T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-06",
+      "open_at": "2026-07-06T09:15:00+05:30",
+      "close_at": "2026-07-06T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-07",
+      "open_at": "2026-07-07T09:15:00+05:30",
+      "close_at": "2026-07-07T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-08",
+      "open_at": "2026-07-08T09:15:00+05:30",
+      "close_at": "2026-07-08T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-09",
+      "open_at": "2026-07-09T09:15:00+05:30",
+      "close_at": "2026-07-09T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-10",
+      "open_at": "2026-07-10T09:15:00+05:30",
+      "close_at": "2026-07-10T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-13",
+      "open_at": "2026-07-13T09:15:00+05:30",
+      "close_at": "2026-07-13T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-14",
+      "open_at": "2026-07-14T09:15:00+05:30",
+      "close_at": "2026-07-14T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-15",
+      "open_at": "2026-07-15T09:15:00+05:30",
+      "close_at": "2026-07-15T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-16",
+      "open_at": "2026-07-16T09:15:00+05:30",
+      "close_at": "2026-07-16T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-17",
+      "open_at": "2026-07-17T09:15:00+05:30",
+      "close_at": "2026-07-17T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-20",
+      "open_at": "2026-07-20T09:15:00+05:30",
+      "close_at": "2026-07-20T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-21",
+      "open_at": "2026-07-21T09:15:00+05:30",
+      "close_at": "2026-07-21T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-22",
+      "open_at": "2026-07-22T09:15:00+05:30",
+      "close_at": "2026-07-22T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-23",
+      "open_at": "2026-07-23T09:15:00+05:30",
+      "close_at": "2026-07-23T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-24",
+      "open_at": "2026-07-24T09:15:00+05:30",
+      "close_at": "2026-07-24T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-27",
+      "open_at": "2026-07-27T09:15:00+05:30",
+      "close_at": "2026-07-27T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-28",
+      "open_at": "2026-07-28T09:15:00+05:30",
+      "close_at": "2026-07-28T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-29",
+      "open_at": "2026-07-29T09:15:00+05:30",
+      "close_at": "2026-07-29T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-30",
+      "open_at": "2026-07-30T09:15:00+05:30",
+      "close_at": "2026-07-30T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-07-31",
+      "open_at": "2026-07-31T09:15:00+05:30",
+      "close_at": "2026-07-31T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-03",
+      "open_at": "2026-08-03T09:15:00+05:30",
+      "close_at": "2026-08-03T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-04",
+      "open_at": "2026-08-04T09:15:00+05:30",
+      "close_at": "2026-08-04T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-05",
+      "open_at": "2026-08-05T09:15:00+05:30",
+      "close_at": "2026-08-05T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-06",
+      "open_at": "2026-08-06T09:15:00+05:30",
+      "close_at": "2026-08-06T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-07",
+      "open_at": "2026-08-07T09:15:00+05:30",
+      "close_at": "2026-08-07T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-10",
+      "open_at": "2026-08-10T09:15:00+05:30",
+      "close_at": "2026-08-10T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-11",
+      "open_at": "2026-08-11T09:15:00+05:30",
+      "close_at": "2026-08-11T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-12",
+      "open_at": "2026-08-12T09:15:00+05:30",
+      "close_at": "2026-08-12T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-13",
+      "open_at": "2026-08-13T09:15:00+05:30",
+      "close_at": "2026-08-13T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-14",
+      "open_at": "2026-08-14T09:15:00+05:30",
+      "close_at": "2026-08-14T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-17",
+      "open_at": "2026-08-17T09:15:00+05:30",
+      "close_at": "2026-08-17T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-18",
+      "open_at": "2026-08-18T09:15:00+05:30",
+      "close_at": "2026-08-18T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-19",
+      "open_at": "2026-08-19T09:15:00+05:30",
+      "close_at": "2026-08-19T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-20",
+      "open_at": "2026-08-20T09:15:00+05:30",
+      "close_at": "2026-08-20T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-21",
+      "open_at": "2026-08-21T09:15:00+05:30",
+      "close_at": "2026-08-21T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-24",
+      "open_at": "2026-08-24T09:15:00+05:30",
+      "close_at": "2026-08-24T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-25",
+      "open_at": "2026-08-25T09:15:00+05:30",
+      "close_at": "2026-08-25T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-26",
+      "open_at": "2026-08-26T09:15:00+05:30",
+      "close_at": "2026-08-26T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-27",
+      "open_at": "2026-08-27T09:15:00+05:30",
+      "close_at": "2026-08-27T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-28",
+      "open_at": "2026-08-28T09:15:00+05:30",
+      "close_at": "2026-08-28T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-08-31",
+      "open_at": "2026-08-31T09:15:00+05:30",
+      "close_at": "2026-08-31T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-01",
+      "open_at": "2026-09-01T09:15:00+05:30",
+      "close_at": "2026-09-01T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-02",
+      "open_at": "2026-09-02T09:15:00+05:30",
+      "close_at": "2026-09-02T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-03",
+      "open_at": "2026-09-03T09:15:00+05:30",
+      "close_at": "2026-09-03T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-04",
+      "open_at": "2026-09-04T09:15:00+05:30",
+      "close_at": "2026-09-04T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-07",
+      "open_at": "2026-09-07T09:15:00+05:30",
+      "close_at": "2026-09-07T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-08",
+      "open_at": "2026-09-08T09:15:00+05:30",
+      "close_at": "2026-09-08T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-09",
+      "open_at": "2026-09-09T09:15:00+05:30",
+      "close_at": "2026-09-09T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-10",
+      "open_at": "2026-09-10T09:15:00+05:30",
+      "close_at": "2026-09-10T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-11",
+      "open_at": "2026-09-11T09:15:00+05:30",
+      "close_at": "2026-09-11T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-15",
+      "open_at": "2026-09-15T09:15:00+05:30",
+      "close_at": "2026-09-15T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-16",
+      "open_at": "2026-09-16T09:15:00+05:30",
+      "close_at": "2026-09-16T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-17",
+      "open_at": "2026-09-17T09:15:00+05:30",
+      "close_at": "2026-09-17T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-18",
+      "open_at": "2026-09-18T09:15:00+05:30",
+      "close_at": "2026-09-18T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-21",
+      "open_at": "2026-09-21T09:15:00+05:30",
+      "close_at": "2026-09-21T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-22",
+      "open_at": "2026-09-22T09:15:00+05:30",
+      "close_at": "2026-09-22T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-23",
+      "open_at": "2026-09-23T09:15:00+05:30",
+      "close_at": "2026-09-23T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-24",
+      "open_at": "2026-09-24T09:15:00+05:30",
+      "close_at": "2026-09-24T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-25",
+      "open_at": "2026-09-25T09:15:00+05:30",
+      "close_at": "2026-09-25T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-28",
+      "open_at": "2026-09-28T09:15:00+05:30",
+      "close_at": "2026-09-28T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-29",
+      "open_at": "2026-09-29T09:15:00+05:30",
+      "close_at": "2026-09-29T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-09-30",
+      "open_at": "2026-09-30T09:15:00+05:30",
+      "close_at": "2026-09-30T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-01",
+      "open_at": "2026-10-01T09:15:00+05:30",
+      "close_at": "2026-10-01T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-05",
+      "open_at": "2026-10-05T09:15:00+05:30",
+      "close_at": "2026-10-05T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-06",
+      "open_at": "2026-10-06T09:15:00+05:30",
+      "close_at": "2026-10-06T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-07",
+      "open_at": "2026-10-07T09:15:00+05:30",
+      "close_at": "2026-10-07T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-08",
+      "open_at": "2026-10-08T09:15:00+05:30",
+      "close_at": "2026-10-08T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-09",
+      "open_at": "2026-10-09T09:15:00+05:30",
+      "close_at": "2026-10-09T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-12",
+      "open_at": "2026-10-12T09:15:00+05:30",
+      "close_at": "2026-10-12T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-13",
+      "open_at": "2026-10-13T09:15:00+05:30",
+      "close_at": "2026-10-13T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-14",
+      "open_at": "2026-10-14T09:15:00+05:30",
+      "close_at": "2026-10-14T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-15",
+      "open_at": "2026-10-15T09:15:00+05:30",
+      "close_at": "2026-10-15T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-16",
+      "open_at": "2026-10-16T09:15:00+05:30",
+      "close_at": "2026-10-16T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-19",
+      "open_at": "2026-10-19T09:15:00+05:30",
+      "close_at": "2026-10-19T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-21",
+      "open_at": "2026-10-21T09:15:00+05:30",
+      "close_at": "2026-10-21T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-22",
+      "open_at": "2026-10-22T09:15:00+05:30",
+      "close_at": "2026-10-22T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-23",
+      "open_at": "2026-10-23T09:15:00+05:30",
+      "close_at": "2026-10-23T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-26",
+      "open_at": "2026-10-26T09:15:00+05:30",
+      "close_at": "2026-10-26T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-27",
+      "open_at": "2026-10-27T09:15:00+05:30",
+      "close_at": "2026-10-27T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-28",
+      "open_at": "2026-10-28T09:15:00+05:30",
+      "close_at": "2026-10-28T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-29",
+      "open_at": "2026-10-29T09:15:00+05:30",
+      "close_at": "2026-10-29T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-10-30",
+      "open_at": "2026-10-30T09:15:00+05:30",
+      "close_at": "2026-10-30T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-11-02",
+      "open_at": "2026-11-02T09:15:00+05:30",
+      "close_at": "2026-11-02T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-11-03",
+      "open_at": "2026-11-03T09:15:00+05:30",
+      "close_at": "2026-11-03T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-11-04",
+      "open_at": "2026-11-04T09:15:00+05:30",
+      "close_at": "2026-11-04T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-11-05",
+      "open_at": "2026-11-05T09:15:00+05:30",
+      "close_at": "2026-11-05T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    },
+    {
+      "date": "2026-11-06",
+      "open_at": "2026-11-06T09:15:00+05:30",
+      "close_at": "2026-11-06T15:30:00+05:30",
+      "source": "NSE official equity regular market hours 09:15–15:30; 2026 equity holiday schedule"
+    }
+  ],
+  "closed_dates": [
+    "2026-01-03",
+    "2026-01-04",
+    "2026-01-10",
+    "2026-01-11",
+    "2026-01-15",
+    "2026-01-17",
+    "2026-01-18",
+    "2026-01-24",
+    "2026-01-25",
+    "2026-01-26",
+    "2026-01-31",
+    "2026-02-07",
+    "2026-02-08",
+    "2026-02-14",
+    "2026-02-15",
+    "2026-02-21",
+    "2026-02-22",
+    "2026-02-28",
+    "2026-03-01",
+    "2026-03-03",
+    "2026-03-07",
+    "2026-03-08",
+    "2026-03-14",
+    "2026-03-15",
+    "2026-03-21",
+    "2026-03-22",
+    "2026-03-26",
+    "2026-03-28",
+    "2026-03-29",
+    "2026-03-31",
+    "2026-04-03",
+    "2026-04-04",
+    "2026-04-05",
+    "2026-04-11",
+    "2026-04-12",
+    "2026-04-14",
+    "2026-04-18",
+    "2026-04-19",
+    "2026-04-25",
+    "2026-04-26",
+    "2026-05-01",
+    "2026-05-02",
+    "2026-05-03",
+    "2026-05-09",
+    "2026-05-10",
+    "2026-05-16",
+    "2026-05-17",
+    "2026-05-23",
+    "2026-05-24",
+    "2026-05-28",
+    "2026-05-30",
+    "2026-05-31",
+    "2026-06-06",
+    "2026-06-07",
+    "2026-06-13",
+    "2026-06-14",
+    "2026-06-20",
+    "2026-06-21",
+    "2026-06-26",
+    "2026-06-27",
+    "2026-06-28",
+    "2026-07-04",
+    "2026-07-05",
+    "2026-07-11",
+    "2026-07-12",
+    "2026-07-18",
+    "2026-07-19",
+    "2026-07-25",
+    "2026-07-26",
+    "2026-08-01",
+    "2026-08-02",
+    "2026-08-08",
+    "2026-08-09",
+    "2026-08-15",
+    "2026-08-16",
+    "2026-08-22",
+    "2026-08-23",
+    "2026-08-29",
+    "2026-08-30",
+    "2026-09-05",
+    "2026-09-06",
+    "2026-09-12",
+    "2026-09-13",
+    "2026-09-14",
+    "2026-09-19",
+    "2026-09-20",
+    "2026-09-26",
+    "2026-09-27",
+    "2026-10-02",
+    "2026-10-03",
+    "2026-10-04",
+    "2026-10-10",
+    "2026-10-11",
+    "2026-10-17",
+    "2026-10-18",
+    "2026-10-20",
+    "2026-10-24",
+    "2026-10-25",
+    "2026-10-31",
+    "2026-11-01",
+    "2026-11-07"
+  ]
+}
