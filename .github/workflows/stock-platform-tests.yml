@@ -35,6 +35,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt pytest
       - name: Compile Python modules
-        run: python -m compileall -q ict_engine scripts
+        run: python -m compileall -q ict_engine scripts dashboard
       - name: Run deterministic test suite
         run: python -m pytest -q
