@@ -332,7 +332,7 @@ def _silver_bullet_signals(
             result.append(StockSignal(
                 _signal_id(symbol, candidate.model, direction, available_at, gap.lower, gap.upper,
                            f"{candidate.draw_on_liquidity.name}:{candidate.draw_on_liquidity.price}"),
-                symbol, company_name, candidate.model, direction, "ENTRY_ARMED",
+                symbol, company_name, candidate.model, direction, "QUALIFIED",
                 available_at, gap.lower, gap.upper, None, (),
                 None, None, None, None, None, None,
                 candles_1m[gap.first_candle_index].timestamp,
