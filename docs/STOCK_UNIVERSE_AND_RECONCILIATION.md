@@ -70,6 +70,12 @@ Example structure (illustrative schema only; not market calendar data):
 
 The example deliberately contains placeholders, not invented dates or sessions.
 
+## Live quote snapshots
+
+`AngelOneStockFeed.fetch_full_quotes()` requests FULL market data for all 50 resolved NSE tokens in one SmartAPI market-data call. It validates token identity, duplicate/missing/unfetched rows, positive LTP and exchange feed timestamp. A quote without an exchange timestamp is treated as stale/unknown, not fresh. The default 90-second age threshold is an engineering setting and should be calibrated with live-session observations. A FULL quote is a point-in-time snapshot, not a replacement for candle history or a continuous WebSocket stream.
+
+Angel One documents a maximum of 50 symbols in one market-data request, a one-request-per-second limit, and FULL quote fields including LTP and exchange feed time. See [SmartAPI documentation](https://smartapi.angelone.in/docs).
+
 ## Historical request constraints
 
 The adapter uses Angel One's documented maximum request windows:
