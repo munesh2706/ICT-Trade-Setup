@@ -93,7 +93,7 @@ class StockPaperStore:
             changed = self.append_event(
                 f"{signal.signal_id}:entry-armed", signal.signal_id,
                 observed_at, SignalStatus.ENTRY_ARMED,
-                "Completed candle intersected the FVG entry zone", evidence_ref=signal.source_id,
+                "FVG zone established; paper limit order armed", evidence_ref=signal.source_id,
             ) or changed
         return changed
 
