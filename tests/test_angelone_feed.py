@@ -16,7 +16,7 @@ class FakeClient:
         return self.payload
 
 def feed(payload):
-    return AngelOneHistoricalFeed(FakeClient(payload), INDEX_INSTRUMENTS, pace_seconds=0.001)
+    return AngelOneHistoricalFeed(FakeClient(payload), INDEX_INSTRUMENTS, pace_seconds=0.34)
 
 def test_fetch_candles_normalizes_decimal_ohlcv_and_uses_index_token():
     f = feed({"status": True, "data": [["2026-01-01T09:15:00+05:30", "100", "102", "99", "101", "50"]]})
@@ -49,3 +49,22 @@ def test_rejects_provider_failure_without_retry():
     with pytest.raises(AngelOneFeedError):
         f.fetch_candles("NIFTY", "1m", datetime(2026,1,1,9,15,tzinfo=IST), datetime(2026,1,1,10,0,tzinfo=IST))
     assert len(f._client.calls) == 1
+def test_long_range_is_split_at_documented_one_minute_limit():
+    f = feed({"status": True, "data": []})
+    start = datetime(2026,1,1,9,15,tzinfo=IST)
+    end = datetime(2026,2,1,9,15,tzinfo=IST)
+    assert f.fetch_range("NIFTY", "1m", start, end) == []
+    assert len(f._client.calls) == 2
+    assert f._client.calls[0]["todate"] == "2026-01-31 09:15"
+    assert f._client.calls[1]["fromdate"] == "2026-01-31 09:15"
+
+
+def test_single_request_over_documented_limit_rejected():
+    f = feed({"status": True, "data": []})
+    with pytest.raises(ValueError):
+        f.fetch_candles("NIFTY", "1m", datetime(2026,1,1,9,15,tzinfo=IST), datetime(2026,2,1,9,15,tzinfo=IST))
+
+
+def test_historical_rate_pacing_cannot_exceed_documented_limit():
+    with pytest.raises(ValueError):
+        AngelOneHistoricalFeed(FakeClient({"status": True, "data": []}), INDEX_INSTRUMENTS, pace_seconds=0.2)
