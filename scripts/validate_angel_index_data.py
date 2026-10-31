@@ -144,12 +144,12 @@ def audit_candles(candles, minutes, session_date):
         if c["volume"] < 0:
             invalid_ohlc.append(c["timestamp"].isoformat())
         if c["timestamp"].date() != session_date or not (
-            dtime(9, 15) <= c["timestamp"].time().replace(tzinfo=None) <= dtime(15, 30)
+            dtime(9, 15) <= c["timestamp"].time().replace(tzinfo=None) < dtime(15, 30)
         ):
             outside.append(c["timestamp"].isoformat())
         if c["timestamp"] > datetime.now(IST) + timedelta(minutes=1):
             future.append(c["timestamp"].isoformat())
-    expected = int((15 * 60 + 30 - (9 * 60 + 15)) / minutes) + 1
+    expected = int((15 * 60 + 30 - (9 * 60 + 15)) / minutes)
     # Do not label missing bars as definitive until the exchange calendar/halts are checked.
     return result("PASS" if not duplicates and monotonic and not invalid_ohlc and not outside and not future else "FAIL",
                   count=len(candles), duplicates=duplicates, strictly_increasing=monotonic,
@@ -319,17 +319,28 @@ def main():
             tokens_by_exchange = {"NSE": [instruments["NIFTY"]["token"], instruments["BANKNIFTY"]["token"]],
                                   "BSE": [instruments["SENSEX"]["token"]]}
             try:
-                q = api.getMarketData("LTP", tokens_by_exchange)
+                q = api.getMarketData("FULL", tokens_by_exchange)
                 if q.get("status") is not True:
                     raise RuntimeError(f"Quote API rejected request: {q.get('message')} ({q.get('errorcode')})")
                 data = q.get("data") or {}
                 fetched = data.get("fetched") or []
                 unfetched = data.get("unfetched") or []
                 for key, inst in instruments.items():
-                    matches = [x for x in fetched if str(x.get("symbolToken", x.get("symboltoken", ""))) == inst["token"]]
-                    quotes[key] = result("PASS" if matches else "WARN",
-                                         matched_count=len(matches), quote_fields=list(matches[0].keys()) if matches else [],
-                                         unfetched_count=len(unfetched))
+                    matches = [x for x in fetched
+                               if str(x.get("symbolToken", x.get("symboltoken", ""))) == inst["token"]]
+                    row = matches[0] if len(matches) == 1 else {}
+                    exchange_ok = str(row.get("exchange", "")).upper() == inst["exchange"]
+                    try:
+                        ltp = float(row.get("ltp", 0))
+                    except (TypeError, ValueError):
+                        ltp = 0.0
+                    checks_ok = len(matches) == 1 and exchange_ok and ltp > 0
+                    quotes[key] = result("PASS" if checks_ok else "WARN",
+                                         matched_count=len(matches), exchange_matches=exchange_ok,
+                                         ltp_present=ltp > 0 if row else False,
+                                         feed_time=row.get("exchFeedTime"),
+                                         unfetched_count=len(unfetched),
+                                         reason=None if checks_ok else "Expected exactly one token match with correct exchange and positive LTP")
             except Exception as exc:
                 quotes = {k: result("FAIL", error=str(exc)[:300]) for k in instruments}
             report["checks"]["live_quotes"] = quotes
