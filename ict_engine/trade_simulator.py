@@ -49,8 +49,10 @@ class PaperExit:
     net_pnl: Decimal
     ambiguous_bar: bool
     gap_through_stop: bool
+    r_multiple: Decimal
+    duration_minutes: int
     def as_trade_result(self) -> TradeResult:
-        return TradeResult(self.gross_pnl, self.fees, self.slippage_cost)
+        return TradeResult(self.gross_pnl, self.fees, self.slippage_cost, self.r_multiple, self.duration_minutes)
 
 def process_position_bar(position: PaperPosition, candle: Candle, *, bar_duration: timedelta) -> PaperExit | None:
     """Return an exit only for bars strictly after the entry bar.
