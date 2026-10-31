@@ -4,8 +4,8 @@ from scripts.backtest_nifty50_ict import _split_trades, _summary
 
 def test_backtest_metrics_are_net_of_fees_and_slippage():
     rows = [
-        {"gross_pnl":"100","fees":"10","slippage_cost":"5","r_multiple":"2","duration_minutes":30},
-        {"gross_pnl":"-50","fees":"10","slippage_cost":"5","r_multiple":"-1","duration_minutes":20},
+        {"exit_time":"2026-10-30T10:30:00+05:30","gross_pnl":"100","fees":"10","slippage_cost":"5","r_multiple":"2","duration_minutes":30},
+        {"exit_time":"2026-10-30T11:00:00+05:30","gross_pnl":"-50","fees":"10","slippage_cost":"5","r_multiple":"-1","duration_minutes":20},
     ]
     result = _summary(rows)
     assert result["trade_count"] == 2
