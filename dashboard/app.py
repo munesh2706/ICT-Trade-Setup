@@ -56,13 +56,15 @@ def state_payload() -> dict:
         symbol = row.get("symbol", "")
         quote = quotes.get(symbol)
         tick_age = None
-        if quote and quote.get("received_at"):
+        if quote and (quote.get("exchange_timestamp") or quote.get("received_at")):
             try:
-                received = datetime.fromisoformat(quote["received_at"])
-                tick_age = max(0, int((datetime.now(timezone.utc) - received.astimezone(timezone.utc)).total_seconds()))
+                quote_time = datetime.fromisoformat(quote.get("exchange_timestamp") or quote["received_at"])
+                tick_age = max(0, int((datetime.now(timezone.utc) - quote_time.astimezone(timezone.utc)).total_seconds()))
             except ValueError:
                 pass
         stocks.append({**row, "quote": quote, "tick_age_seconds": tick_age,
+                       "quote_stale": bool(quote.get("stale", True)) if quote else True,
+                       "quote_source": quote.get("source") if quote else None,
                        "signals_count": len(signals_by_symbol.get(symbol, []))})
     journal = paper_store()
     open_positions = []
@@ -96,7 +98,7 @@ def state_payload() -> dict:
             "paper_trades_opened": paper.get("positions_opened", 0),
             "paper_trades_closed": len(closed_today),
             "paper_realized_pnl": paper.get("realized_pnl_today", "0"),
-            "stream_errors": live.get("recent_errors", []),
+            "stream_errors": live.get("recent_errors", []), "quote_api": live.get("quote_api", {}),
         },
         "stocks": stocks, "signals": report.get("signals") or [],
         "open_positions": open_positions, "closed_trades": closed_trades[-200:],
