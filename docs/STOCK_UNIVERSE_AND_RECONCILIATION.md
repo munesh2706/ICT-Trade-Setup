@@ -15,6 +15,8 @@ The official NSE constituent list is metadata only; it is not a source of market
 
 ## Pre-session reconciliation
 
+Configure `ICT_HISTORY_START_DATE` once (or pass `--history-start`) to define the earliest history required by the strategy. Run `python scripts/pre_session_gate.py --calendar path/to/nse_calendar.json` before the scanner/dashboard process. If the gate exits non-zero, do not start the scanner. The gate re-audits the entire configured date range each time; only missing bars cause Angel One requests.
+
 \`scripts/reconcile_nifty50_history.py\` performs the pre-market historical repair gate:
 
 1. Load a provenance-backed explicit NSE calendar. Unknown calendar dates fail closed.
