@@ -7,9 +7,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from ict_engine.market_calendar import ExchangeCalendar, TradingSession
 from ict_engine.stock_feed import AngelOneStockFeed
@@ -17,7 +22,6 @@ from ict_engine.stock_reconciliation import reconcile_universe
 from ict_engine.stock_storage import StockCandleStore
 from ict_engine.stock_universe import download_nse_universe, save_universe_snapshot
 
-ROOT = Path(__file__).resolve().parents[1]
 IST = ZoneInfo("Asia/Kolkata")
 
 def load_calendar(path: Path) -> ExchangeCalendar:
