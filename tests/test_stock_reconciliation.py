@@ -32,7 +32,9 @@ class FakeFeed:
                 "interval": "ONE_MINUTE", "fromdate": start.strftime("%Y-%m-%d %H:%M"),
                 "todate": end.strftime("%Y-%m-%d %H:%M"),
             },
-            "payload": {"status": True, "data": []},
+            "payload": {"status": True, "data": [
+                [stamp.isoformat(), "100", "101", "99", "100", "500"]
+            ] if rows else []},
         })
         return rows
 
