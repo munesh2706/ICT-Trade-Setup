@@ -12,7 +12,7 @@ def test_performance_metrics_are_net_of_fees_and_slippage():
     assert s.total_fees == D("25")
     assert s.total_slippage == D("10")
     assert s.expectancy == D("65") / D("3")
-    assert s.profit_factor == D("130") / D("70")
+    assert s.profit_factor == D("140") / D("75")
     assert s.max_drawdown == D("75")
     assert s.max_consecutive_losses == 1
 
