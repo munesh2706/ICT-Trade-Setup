@@ -81,7 +81,7 @@ def test_dashboard_marks_old_reports_stale_and_does_not_value_positions_from_sta
     journal = StockPaperStore(db)
     journal.register_signal(
         type("Signal", (), {"signal_id":"s1","symbol":"RELIANCE","model_id":"m","direction":"long",
-                            "available_at":datetime.now(timezone.utc),"source_id":"src","status":"QUALIFIED"})(),
+                            "available_at":datetime.now(timezone.utc),"source_id":"src","status":"ENTRY_ARMED"})(),
         evidence={}, observed_at=datetime.now(timezone.utc),
     )
     position = PaperPosition("p1","RELIANCE","m","long",datetime.now(timezone.utc),
