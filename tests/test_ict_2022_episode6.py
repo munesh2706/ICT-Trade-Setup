@@ -51,6 +51,7 @@ def test_complete_bearish_episode6_candidate_is_available_only_after_fvg_closes(
     candidates = detect_ict_2022_episode6(
         candles, pivot_left=1, pivot_right=1,
         displacement_min_body_to_range=D("0.5"),
+        max_bars_after_sweep=3, max_bars_after_mss=3,
     )
     candidate = next(c for c in candidates if c.sweep.reference_swing.pivot_index == 4)
     assert candidate.direction == "bearish"
