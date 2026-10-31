@@ -52,3 +52,18 @@ def test_quote_merge_keeps_stale_state_when_both_sources_are_stale():
     result = _merge_quote_sources({"RELIANCE":tick},SimpleNamespace(quotes=(fallback,)))
     assert result["RELIANCE"]["ltp"] == "101"
     assert result["RELIANCE"]["stale"] is True
+
+
+def test_quote_merge_selects_newest_exchange_timestamp_when_both_fresh():
+    now = datetime(2026,10,30,10,0,tzinfo=IST)
+    fallback = SimpleNamespace(
+        symbol="RELIANCE", ltp=Decimal("102"), exchange_timestamp=now-timedelta(seconds=5),
+        received_at=now, age_seconds=5.0, stale=False,
+    )
+    tick = SimpleNamespace(
+        symbol="RELIANCE", ltp=Decimal("103"), exchange_timestamp=now-timedelta(seconds=1),
+        received_at=now, age_seconds=None, stale=None,
+    )
+    result = _merge_quote_sources({"RELIANCE":tick},SimpleNamespace(quotes=(fallback,)))
+    assert result["RELIANCE"]["ltp"] == "103"
+    assert result["RELIANCE"]["source"] == "Angel One WebSocket V2"
