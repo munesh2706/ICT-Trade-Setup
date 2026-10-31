@@ -83,6 +83,8 @@ class AngelOneHistoricalFeed:
             raise ValueError("start/end must be timezone-aware and end must be later")
         if (end - start).total_seconds() > MAX_REQUEST_DAYS[timeframe] * 86400:
             raise ValueError(f"request exceeds documented {MAX_REQUEST_DAYS[timeframe]}-day limit for {timeframe}; use fetch_range")
+        if any(x.second != 0 or x.microsecond != 0 for x in (start, end)):
+            raise ValueError("start/end must align to the API minute precision")
         spec = self._instruments[instrument_id]
         wait = self._pace_seconds - (time.monotonic() - self._last_request_at)
         if wait > 0:
