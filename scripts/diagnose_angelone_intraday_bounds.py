@@ -18,7 +18,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.reconcile_nifty50_history import load_calendar
 from ict_engine.stock_feed import INTERVAL_MINUTES, AngelOneStockFeed
-from ict_engine.stock_universe import download_nse_universe
+from ict_engine.stock_universe import download_angelone_master, download_nse_universe
 
 TIMEFRAMES = ("1m", "5m", "15m")
 
@@ -47,6 +47,15 @@ def main() -> int:
         raise SystemExit(f"{args.date} is explicitly a closed NSE date")
     universe = download_nse_universe()
     feed = AngelOneStockFeed.connect_from_env(universe, pace_seconds=args.pace_seconds)
+    master_rows, master_digest = download_angelone_master()
+    members = {member.symbol for member in universe.constituents}
+    nfo_stock_futures = {
+        str(row.get("name", "")).strip().upper()
+        for row in master_rows
+        if str(row.get("exch_seg", "")).strip().upper() == "NFO"
+        and str(row.get("instrumenttype", "")).strip().upper() == "FUTSTK"
+        and str(row.get("name", "")).strip().upper() in members
+    }
     symbol = universe.constituents[0].symbol
     open_at = session.open_at
     close_at = session.close_at
@@ -59,6 +68,10 @@ def main() -> int:
         "symbol": symbol,
         "token": feed.instruments[symbol].token,
         "instrument_master_sha256": feed.master_sha256,
+        "derivatives_master_sha256": master_digest,
+        "cas_eligibility_proxy": "Angel One NFO FUTSTK rows for current NIFTY 50 membership",
+        "nifty50_stock_futures_symbols": sorted(nfo_stock_futures),
+        "nifty50_without_stock_futures": sorted(members - nfo_stock_futures),
         "session_open": open_at.isoformat(),
         "session_close": close_at.isoformat(),
         "split_at": split_at.isoformat(),
