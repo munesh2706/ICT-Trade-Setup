@@ -146,7 +146,7 @@ def run_backtest(args) -> dict:
     scan_count = 0
     for session in replay_sessions:
         as_of = _first_scan_time(session)
-        close_at = session.close_at.astimezone(IST)
+        close_at = (session.continuous_close_at or session.close_at).astimezone(IST)
         if as_of > close_at:
             raise ValueError(
                 f"session {session.trading_date} closes before the scanner's 15-minute context warm-up completes"
@@ -155,13 +155,17 @@ def run_backtest(args) -> dict:
             report = scanner.scan_universe(
                 universe=universe, store=source, calendar=calendar,
                 scan_date=session.trading_date, as_of=as_of,
+                cas_eligible_symbols=feed.cas_eligible_symbols,
             )
             if report.ready_stocks != 50:
                 raise RuntimeError(
                     f"DATA GATE CLOSED at {as_of.isoformat()}: "
                     f"{report.ready_stocks}/50 stocks passed verified candle readiness"
                 )
-            engine.process_scan_report(report, candles=source, journal=journal)
+            engine.process_scan_report(
+                report, candles=source, journal=journal, calendar=calendar,
+                cas_eligible_symbols=feed.cas_eligible_symbols,
+            )
             scan_count += 1
             as_of += timedelta(minutes=1)
         engine.expire_pending_signals(journal, close_at)
