@@ -51,15 +51,19 @@ class CandleStore:
                        (snapshot_id, datetime.now(timezone.utc).isoformat(), description))
 
     def finalize_snapshot(self, snapshot_id: str, *, status: str, description: str | None = None) -> None:
-        if status not in {"COMPLETE", "FAILED"}:
-            raise ValueError("final status must be COMPLETE or FAILED")
+        if status not in {"ACQUIRED", "VERIFIED", "FAILED"}:
+            raise ValueError("status must be ACQUIRED, VERIFIED or FAILED")
         with self._connect() as db:
+            current = db.execute("SELECT status FROM candle_snapshots WHERE snapshot_id=?", (snapshot_id,)).fetchone()
+            allowed = {"OPEN": {"ACQUIRED", "FAILED"}, "ACQUIRED": {"VERIFIED", "FAILED"}}
+            if current is None or status not in allowed.get(current[0], set()):
+                raise ValueError("invalid snapshot status transition")
             if description is None:
-                updated = db.execute("UPDATE candle_snapshots SET status=? WHERE snapshot_id=? AND status='OPEN'", (status, snapshot_id)).rowcount
+                updated = db.execute("UPDATE candle_snapshots SET status=? WHERE snapshot_id=?", (status, snapshot_id)).rowcount
             else:
-                updated = db.execute("UPDATE candle_snapshots SET status=?, description=? WHERE snapshot_id=? AND status='OPEN'", (status, description, snapshot_id)).rowcount
+                updated = db.execute("UPDATE candle_snapshots SET status=?, description=? WHERE snapshot_id=?", (status, description, snapshot_id)).rowcount
             if updated != 1:
-                raise ValueError("snapshot does not exist or is already finalized")
+                raise ValueError("snapshot does not exist or could not be finalized")
 
     def snapshot_status(self, snapshot_id: str) -> str:
         with self._connect() as db:
@@ -101,8 +105,8 @@ class CandleStore:
 
     def load_candles(self, instrument_id: str, timeframe: str, snapshot_id: str, start: datetime | None = None, end: datetime | None = None, *, allow_incomplete: bool = False) -> list[Candle]:
         status = self.snapshot_status(snapshot_id)
-        if status != "COMPLETE" and not allow_incomplete:
-            raise ValueError(f"snapshot {snapshot_id} is not COMPLETE")
+        if status != "VERIFIED" and not allow_incomplete:
+            raise ValueError(f"snapshot {snapshot_id} is not VERIFIED")
         query = "SELECT start_utc,open,high,low,close,volume FROM candles WHERE instrument_id=? AND timeframe=? AND snapshot_id=?"
         params: list[object] = [instrument_id, timeframe, snapshot_id]
         if start is not None:
