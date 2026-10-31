@@ -42,14 +42,19 @@ def fair_value_gaps(candles: Sequence[Candle]) -> list[FairValueGap]:
     return gaps
 
 def liquidity_sweeps(candles: Sequence[Candle], swings: Sequence[SwingPoint]) -> list[LiquiditySweep]:
-    """Detect wick-through-and-close-back events at already-confirmed swings."""
+    """Detect the first price penetration of already-confirmed swing liquidity.
+
+    A same-candle close back through the level is not required: Episode 6
+    describes a run beyond the old high/low followed by a subsequent shift.
+    """
     events: list[LiquiditySweep] = []
     for i, candle in enumerate(candles):
         eligible = [s for s in swings if s.confirmed_at_index < i]
         for swing in eligible:
-            if swing.kind == "high" and candle.high > swing.price and candle.close < swing.price:
+            previous = candles[i - 1] if i > 0 else None
+            if swing.kind == "high" and candle.high > swing.price and (previous is None or previous.high <= swing.price):
                 events.append(LiquiditySweep(i, swing, candle.high, "buy_side"))
-            elif swing.kind == "low" and candle.low < swing.price and candle.close > swing.price:
+            elif swing.kind == "low" and candle.low < swing.price and (previous is None or previous.low >= swing.price):
                 events.append(LiquiditySweep(i, swing, candle.low, "sell_side"))
     return events
 
