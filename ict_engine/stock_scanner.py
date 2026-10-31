@@ -409,7 +409,7 @@ class StockICTScanner:
                 tf: sum(1 for stamp in expected if stamp not in observed_by_tf[tf])
                 for tf, expected in expected_by_tf.items()
             }
-            if not one or not five or not fifteen or any(missing_counts.values()):
+            if not any(expected_by_tf.values()) or not one or not five or not fifteen or any(missing_counts.values()):
                 if not any(expected_by_tf.values()):
                     reason = "waiting for first completed current-session candles"
                 else:
