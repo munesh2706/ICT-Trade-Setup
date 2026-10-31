@@ -157,12 +157,12 @@ class StockPaperStore:
             entry_time = _utc(position.entry_time)
             db.execute("""INSERT INTO paper_positions
                 (position_id,signal_id,symbol,model_id,direction,entry_time_utc,entry_price,stop,target,
-                 quantity,point_value,fees_per_unit,slippage_points,status)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'OPEN')""",
+                 quantity,point_value,fees_per_unit,slippage_points,status,last_processed_bar_utc)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'OPEN',?)""",
                 (position.position_id, signal_id, position.instrument_id, position.model_id,
                  position.direction, entry_time, str(position.entry_price), str(position.stop),
                  str(position.target), str(position.quantity), str(position.point_value),
-                 str(position.round_trip_fees_per_unit), str(position.round_trip_slippage_points)))
+                 str(position.round_trip_fees_per_unit), str(position.round_trip_slippage_points), entry_time))
             db.execute("""INSERT INTO paper_signal_events
                 (event_id,signal_id,timestamp_utc,target_status,reason,evidence_ref,payload_json)
                 VALUES (?,?,?,?,?,?,?)""",
@@ -221,16 +221,30 @@ class StockPaperStore:
             raise ValueError("unknown position_id")
         return row[0]
 
+    def last_processed_bar(self, position_id: str) -> datetime:
+        with self._connect() as db:
+            row = db.execute("SELECT last_processed_bar_utc,entry_time_utc FROM paper_positions WHERE position_id=? AND status='OPEN'", (position_id,)).fetchone()
+        if row is None:
+            raise ValueError("unknown open position_id")
+        return datetime.fromisoformat(row[0] or row[1])
+
+    def update_position_progress(self, position_id: str, bar_timestamp: datetime):
+        stamp = _utc(bar_timestamp)
+        with self._connect() as db:
+            db.execute("UPDATE paper_positions SET last_processed_bar_utc=? WHERE position_id=? AND status='OPEN'",
+                       (stamp, position_id))
+
     def load_daily_risk(self, risk_date: date, starting_equity: Decimal) -> DailyRiskState:
         with self._connect() as db:
             row = db.execute("""SELECT realized_pnl,open_positions,trades_today,consecutive_losses
                 FROM paper_daily_risk WHERE risk_date=?""", (risk_date.isoformat(),)).fetchone()
             if row is None:
+                open_count = db.execute("SELECT COUNT(*) FROM paper_positions WHERE status='OPEN'").fetchone()[0]
                 db.execute("""INSERT INTO paper_daily_risk
                     (risk_date,equity,realized_pnl,open_positions,trades_today,consecutive_losses,updated_at_utc)
                     VALUES (?,?,?,?,?,?,?)""",
-                    (risk_date.isoformat(), str(starting_equity), "0", 0, 0, 0, datetime.now(timezone.utc).isoformat()))
-                return DailyRiskState(risk_date)
+                    (risk_date.isoformat(), str(starting_equity), "0", open_count, 0, 0, datetime.now(timezone.utc).isoformat()))
+                return DailyRiskState(risk_date, Decimal("0"), open_count, 0, 0)
             return DailyRiskState(risk_date, Decimal(row[0]), row[1], row[2], row[3])
 
     def save_daily_risk(self, risk_date: date, equity: Decimal, state: DailyRiskState):
