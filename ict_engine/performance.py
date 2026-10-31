@@ -74,7 +74,7 @@ def summarize_trades(trades: Sequence[TradeResult]) -> PerformanceSummary:
         total_slippage=sum((t.slippage_cost for t in trades), ZERO),
         net_pnl=sum(net, ZERO),
         expectancy=(sum(net, ZERO) / Decimal(count) if count else None),
-        profit_factor=(gross_profit / gross_loss if gross_loss else (None if not gross_profit else None)),
+        profit_factor=(gross_profit / gross_loss if gross_loss > ZERO else None),
         average_win=(gross_profit / Decimal(len(wins)) if wins else None),
         average_loss=(sum(losses, ZERO) / Decimal(len(losses)) if losses else None),
         max_drawdown=max_drawdown,
