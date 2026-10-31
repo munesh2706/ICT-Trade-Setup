@@ -7,7 +7,8 @@ not a threshold taught by ICT. No signal is emitted without it.
 from __future__ import annotations
 from decimal import Decimal
 from typing import Sequence
-from .models import Candle, FairValueGap, ICT2022SetupCandidate, LiquiditySweep, MarketStructureShift, SwingPoint
+from .models import Candle, ExternalLiquiditySweep, FairValueGap, ICT2022SetupCandidate, LiquiditySweep, MarketStructureShift, SwingPoint
+from .context import LiquidityLevel, external_liquidity_sweeps
 
 ZERO = Decimal("0")
 
@@ -62,11 +63,20 @@ def _body_to_range(candle: Candle) -> Decimal:
     full_range = candle.high - candle.low
     return ZERO if full_range == ZERO else abs(candle.close - candle.open) / full_range
 
-def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivot_right: int, displacement_min_body_to_range: Decimal, max_bars_after_sweep: int, max_bars_after_mss: int) -> list[ICT2022SetupCandidate]:
-    """Detect Episode 6 sweep -> displacement/MSS -> in-leg FVG candidates.
+def detect_ict_2022_episode6(
+    candles: Sequence[Candle],
+    *,
+    pivot_left: int,
+    pivot_right: int,
+    displacement_min_body_to_range: Decimal,
+    max_bars_after_sweep: int,
+    max_bars_after_mss: int,
+    external_liquidity_levels: Sequence[LiquidityLevel] = (),
+) -> list[ICT2022SetupCandidate]:
+    """Detect Episode 6 candidates using local swings and external liquidity.
 
-    Only completed candles should be passed. Pivot widths and displacement
-    threshold are explicit engineering assumptions, not fixed ICT rules.
+    Pivot widths, displacement threshold and sequence bar limits are explicit
+    engineering assumptions. Only completed candles should be passed.
     """
     if not ZERO < displacement_min_body_to_range <= Decimal("1"):
         raise ValueError("displacement_min_body_to_range must be in (0, 1]")
@@ -74,9 +84,11 @@ def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivo
         raise ValueError("max_bars_after_sweep and max_bars_after_mss must be >= 1")
     swings = confirmed_swings(candles, pivot_left, pivot_right)
     gaps = fair_value_gaps(candles)
-    sweeps = liquidity_sweeps(candles, swings)
+    sweeps: list[LiquiditySweep | ExternalLiquiditySweep] = liquidity_sweeps(candles, swings)
+    sweeps.extend(external_liquidity_sweeps(candles, external_liquidity_levels))
     results: list[ICT2022SetupCandidate] = []
-    for sweep in sweeps:
+
+    for sweep in sorted(sweeps, key=lambda item: item.candle_index):
         if sweep.direction == "buy_side":
             direction, broken_kind = "bearish", "low"
         else:
@@ -89,8 +101,7 @@ def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivo
             continue
         broken = prior_structure[-1]
 
-        # Find the first completed displacement candle that closes through
-        # the pre-sweep short-term swing.
+        # Require a subsequent completed displacement candle through structure.
         mss = None
         sweep_deadline = min(len(candles), sweep.candle_index + max_bars_after_sweep + 1)
         for j in range(sweep.candle_index + 1, sweep_deadline):
@@ -103,36 +114,36 @@ def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivo
         if mss is None:
             continue
 
-        # Search FVGs formed within the post-raid displacement leg. The
-        # FVG's third candle may complete after the MSS candle; the candidate
-        # is not observable until both events have completed.
-        eligible_gaps = [
-            g for g in gaps
-            if g.direction == direction
-            and g.first_candle_index >= sweep.candle_index
-        ]
-        if not eligible_gaps:
-            continue
-        gap = min(eligible_gaps, key=lambda g: g.third_candle_index)
-        # Freeze the displacement range at the MSS candle; later price action
-        # must not silently redefine the range used to qualify this setup.
+        # Freeze the displacement range at the MSS candle. A later FVG may
+        # qualify only if it is spatially inside this fixed range and completes
+        # within the configured sequence limit.
         leg_candles = candles[sweep.candle_index:mss.candle_index + 1]
         if direction == "bearish":
             range_high = sweep.extreme
             range_low = min(c.low for c in leg_candles)
-            if gap.lower < range_low or gap.upper > range_high:
-                continue
+        else:
+            range_low = sweep.extreme
+            range_high = max(c.high for c in leg_candles)
+
+        eligible_gaps = [
+            g for g in gaps
+            if g.direction == direction
+            and g.first_candle_index >= sweep.candle_index
+            and g.third_candle_index <= mss.candle_index + max_bars_after_mss
+            and g.lower >= range_low
+            and g.upper <= range_high
+        ]
+        if not eligible_gaps:
+            continue
+        gap = min(eligible_gaps, key=lambda g: g.third_candle_index)
+
+        if direction == "bearish":
             entry = gap.lower
-            # Preserve both source-described stop variants: beyond candle 1 or candle 2.
             invalidations = (
                 candles[gap.first_candle_index].high,
                 candles[gap.middle_candle_index].high,
             )
         else:
-            range_low = sweep.extreme
-            range_high = max(c.high for c in leg_candles)
-            if gap.lower < range_low or gap.upper > range_high:
-                continue
             entry = gap.upper
             invalidations = (
                 candles[gap.first_candle_index].low,
