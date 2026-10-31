@@ -35,6 +35,7 @@ from ict_engine.performance import TradeResult, summarize_trades
 
 IST = ZoneInfo("Asia/Kolkata")
 
+
 def encode(value):
     if isinstance(value, Decimal):
         return str(value)
@@ -52,6 +53,7 @@ def encode(value):
         return [encode(v) for v in value]
     return value
 
+
 def _summary(rows):
     rows = sorted(rows, key=lambda row: row["exit_time"])
     trades = [TradeResult(
@@ -62,6 +64,7 @@ def _summary(rows):
         duration_minutes=int(row["duration_minutes"]) if row.get("duration_minutes") is not None else None,
     ) for row in rows]
     return encode(summarize_trades(trades))
+
 
 def _split_trades(rows, cutoff: date):
     """Split by entry date and exclude trades crossing the OOS boundary.
@@ -80,6 +83,7 @@ def _split_trades(rows, cutoff: date):
         else:
             out_of_sample.append(row)
     return in_sample, out_of_sample, boundary_crossing
+
 
 def run_backtest(args) -> dict:
     if not args.source_db.is_file():
@@ -154,9 +158,14 @@ def run_backtest(args) -> dict:
 
     closed_rows = journal.closed_trade_rows()
     metrics = {"all": _summary(closed_rows)}
+    boundary_crossing_trades = []
     if args.out_of_sample_start:
-        metrics["in_sample"] = _summary(_by_entry_date(closed_rows, args.out_of_sample_start, True))
-        metrics["out_of_sample"] = _summary(_by_entry_date(closed_rows, args.out_of_sample_start, False))
+        in_sample_rows, out_of_sample_rows, boundary_crossing_trades = _split_trades(
+            closed_rows, args.out_of_sample_start
+        )
+        metrics["in_sample"] = _summary(in_sample_rows)
+        metrics["out_of_sample"] = _summary(out_of_sample_rows)
+
     open_positions = journal.load_open_positions()
     run_id = "stock_ict_backtest_" + datetime.now(IST).strftime("%Y%m%dT%H%M%S") + "_" + uuid4().hex[:8]
     result = {
@@ -208,6 +217,7 @@ def run_backtest(args) -> dict:
     report_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
     return result
 
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Angel One NIFTY 50 stock ICT historical paper backtest")
     parser.add_argument("--start", required=True, type=date.fromisoformat)
@@ -232,6 +242,7 @@ def main() -> int:
     except Exception as exc:
         print(json.dumps({"status": "FAILED", "error": f"{type(exc).__name__}: {exc}"}, indent=2))
         return 1
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
