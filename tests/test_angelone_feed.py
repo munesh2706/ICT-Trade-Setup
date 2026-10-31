@@ -1,8 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from decimal import Decimal as D
 import pytest
 from ict_engine.angelone_feed import AngelOneFeedError, AngelOneHistoricalFeed
 from ict_engine.instruments import INDEX_INSTRUMENTS
+
+IST = ZoneInfo("Asia/Kolkata")
 
 class FakeClient:
     def __init__(self, payload):
@@ -17,7 +20,7 @@ def feed(payload):
 
 def test_fetch_candles_normalizes_decimal_ohlcv_and_uses_index_token():
     f = feed({"status": True, "data": [["2026-01-01T09:15:00+05:30", "100", "102", "99", "101", "50"]]})
-    bars = f.fetch_candles("NIFTY", "1m", datetime(2026,1,1,9,15,tzinfo=timezone.utc), datetime(2026,1,1,10,0,tzinfo=timezone.utc))
+    bars = f.fetch_candles("NIFTY", "1m", datetime(2026,1,1,9,15,tzinfo=IST), datetime(2026,1,1,10,0,tzinfo=timezone.utc))
     assert len(bars) == 1
     assert bars[0].close == D("101")
     assert f._client.calls[0]["symboltoken"] == "99926000"
