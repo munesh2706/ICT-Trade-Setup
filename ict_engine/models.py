@@ -63,6 +63,8 @@ class ICT2022SetupCandidate:
     fvg: FairValueGap
     entry_reference: Decimal
     invalidation_references: tuple[Decimal, Decimal]
+    displacement_range_high: Decimal
+    displacement_range_low: Decimal
     available_at_index: int
     source_id: str
     assumptions: tuple[str, ...]
