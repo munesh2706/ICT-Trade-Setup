@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal as D
-from ict_engine.ict_2022_episode6 import fair_value_gaps, confirmed_swings
-from ict_engine.models import Candle
+from ict_engine.ict_2022_episode6 import fair_value_gaps, confirmed_swings, liquidity_sweeps
+from ict_engine.models import Candle, SwingPoint
 
 def c(i, o, h, l, close):
     return Candle(datetime(2026, 1, 1, 9, 15, tzinfo=timezone.utc) + timedelta(minutes=i), D(str(o)), D(str(h)), D(str(l)), D(str(close)))
@@ -28,3 +28,10 @@ def test_swing_is_not_confirmed_until_right_bars_exist():
     high = next(s for s in swings if s.kind == "high")
     assert high.pivot_index == 1
     assert high.confirmed_at_index == 2
+
+def test_liquidity_run_does_not_require_same_bar_close_back_inside():
+    candles = [c(0, 9, 10, 8, 9), c(1, 10, 12, 9.5, 11.5)]
+    swing = SwingPoint(pivot_index=0, confirmed_at_index=0, price=D("10"), kind="high")
+    sweeps = liquidity_sweeps(candles, [swing])
+    assert len(sweeps) == 1
+    assert sweeps[0].direction == "buy_side"
