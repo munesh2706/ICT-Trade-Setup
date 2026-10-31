@@ -165,10 +165,6 @@ class StockCandleStore:
             raise ValueError("universe_snapshot_id is required to include unverified acquisition data")
         return self._load(symbol, timeframe, ("VERIFIED",), start, end, universe_snapshot_id)
 
-    def load_verified_candles(self, symbol: str, timeframe: str,
-                              start: datetime | None = None, end: datetime | None = None) -> list[Candle]:
-        return self._load(symbol, timeframe, ("VERIFIED",), start, end)
-
     def mark_universe_snapshots_verified(self, universe_snapshot_id: str):
         with self._db() as db:
             db.execute("""UPDATE stock_snapshots SET status='VERIFIED'
