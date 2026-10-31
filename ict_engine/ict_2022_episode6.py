@@ -100,25 +100,36 @@ def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivo
         if mss is None:
             continue
 
-        # The displacement candle is the middle candle of the FVG; the third
-        # candle must have closed before the candidate becomes available.
+        # Search FVGs formed within the post-raid displacement leg. The
+        # FVG's third candle may complete after the MSS candle; the candidate
+        # is not observable until both events have completed.
         eligible_gaps = [
             g for g in gaps
             if g.direction == direction
             and g.first_candle_index >= sweep.candle_index
-            and g.middle_candle_index <= mss.candle_index <= g.third_candle_index
+            and g.third_candle_index >= mss.candle_index
         ]
         if not eligible_gaps:
             continue
         gap = min(eligible_gaps, key=lambda g: g.third_candle_index)
-        entry = gap.lower if direction == "bearish" else gap.upper
-        # Preserve both source-described stop variants: beyond candle 1 or candle 2.
+        leg_candles = candles[sweep.candle_index:gap.third_candle_index + 1]
         if direction == "bearish":
+            range_high = sweep.extreme
+            range_low = min(c.low for c in leg_candles)
+            if gap.lower < range_low or gap.upper > range_high:
+                continue
+            entry = gap.lower
+            # Preserve both source-described stop variants: beyond candle 1 or candle 2.
             invalidations = (
                 candles[gap.first_candle_index].high,
                 candles[gap.middle_candle_index].high,
             )
         else:
+            range_low = sweep.extreme
+            range_high = max(c.high for c in leg_candles)
+            if gap.lower < range_low or gap.upper > range_high:
+                continue
+            entry = gap.upper
             invalidations = (
                 candles[gap.first_candle_index].low,
                 candles[gap.middle_candle_index].low,
@@ -131,7 +142,9 @@ def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivo
             fvg=gap,
             entry_reference=entry,
             invalidation_references=invalidations,
-            available_at_index=gap.third_candle_index,
+            displacement_range_high=range_high,
+            displacement_range_low=range_low,
+            available_at_index=max(mss.candle_index, gap.third_candle_index),
             source_id="ICT-2022-Mentorship-Episode-6-2022-02-04",
             assumptions=(
                 f"pivot_left={pivot_left}, pivot_right={pivot_right}",
