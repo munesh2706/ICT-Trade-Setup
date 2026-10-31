@@ -52,7 +52,7 @@ def encode(value):
         return [encode(v) for v in value]
     return value
 
-def write_report(report, directory: Path, *, tick_count: int, stream_errors: list[str], latest_ticks=None, paper_report=None):
+def write_report(report, directory: Path, *, tick_count: int, stream_errors: list[str], latest_ticks=None, paper_report=None, expired_signals: int = 0):
     directory.mkdir(parents=True, exist_ok=True)
     payload = encode(report)
     quotes = latest_ticks or {}
@@ -71,6 +71,7 @@ def write_report(report, directory: Path, *, tick_count: int, stream_errors: lis
     }
     if paper_report is not None:
         payload["paper_trading"] = encode(paper_report)
+        payload["paper_trading"]["signals_expired_at_session_close"] = expired_signals
     name = f"stock_scan_{report.scan_date.isoformat()}_{report.as_of.strftime('%H%M%S')}.json"
     path = directory / name
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -227,11 +228,15 @@ def main() -> int:
             scan_date=final_as_of.date(), as_of=final_as_of,
         )
         final_paper = paper_engine.process_scan_report(final_scan, candles=store, journal=paper_journal)
+        final_session = calendar.session_for(final_as_of.date())
+        final_expired = 0
+        if final_session is not None and final_as_of >= final_session.close_at:
+            final_expired = paper_engine.expire_pending_signals(paper_journal, final_session.close_at)
         with lock:
             count = tick_count
             errors = list(stream_errors)
             quotes = dict(latest_ticks)
-        report_path = write_report(final_scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, paper_report=final_paper)
+        report_path = write_report(final_scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, paper_report=final_paper, expired_signals=startup_expired + final_expired)
         print(json.dumps({
             "phase": "POST_SESSION",
             "ready_series": final_refresh.ready_series,
@@ -241,6 +246,7 @@ def main() -> int:
             "paper_positions_open": final_paper.open_positions,
             "paper_positions_opened": final_paper.positions_opened,
             "paper_positions_closed": final_paper.positions_closed,
+            "pending_signals_expired": startup_expired + final_expired,
             "report": str(report_path),
         }, indent=2))
         feed.stop_stream()
