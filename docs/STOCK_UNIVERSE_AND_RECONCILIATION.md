@@ -1,0 +1,84 @@
+# NIFTY 50 Stock Universe and Historical Reconciliation
+
+## Scope
+
+The scan universe is the 50 individual NSE cash-equity constituents of NIFTY 50. Index spot instruments, index options and non-constituent equities are excluded.
+
+## Source boundaries
+
+- Membership: official NSE Indices NIFTY 50 constituent CSV. Each download is saved as an immutable dated JSON snapshot with SHA-256 provenance.
+- Token/exchange identity: Angel One OpenAPI instrument master. Every constituent must resolve to exactly one NSE cash-equity row whose trading symbol is exactly \`SYMBOL-EQ\`. Cash EQ rows can have a blank \`instrumenttype\`; do not require the literal value \`EQ\`.
+- Historical/live prices: Angel One SmartAPI only. No other price vendor, fallback price feed, synthetic OHLCV, forward-fill or interpolated candle is allowed.
+- Angel One instrument master is refreshed on each run and its checksum is recorded in the run summary.
+
+The official NSE constituent list is metadata only; it is not a source of market prices.
+
+## Pre-session reconciliation
+
+\`scripts/reconcile_nifty50_history.py\` performs the pre-market historical repair gate:
+
+1. Load a provenance-backed explicit NSE calendar. Unknown calendar dates fail closed.
+2. Download and validate the official 50-member NSE universe snapshot.
+3. Authenticate to Angel One using local environment variables / \`.env\`.
+4. Download the Angel One instrument master and resolve all 50 NSE EQ tokens exactly.
+5. For each stock/timeframe, compare stored verified/acquired timestamps with the expected session grid.
+6. Identify every missing expected timestamp, including gaps spanning minutes, hours or multiple trading days.
+7. Group adjacent missing bars and split requests to Angel One's documented historical API window limits.
+8. Persist original provider responses and exact returned candles in an immutable SQLite acquisition snapshot.
+9. Repeat the gap scan for a bounded number of passes.
+10. Release the dataset to downstream strategy code only when every required series passes the complete grid audit.
+
+An unresolved API error or missing candle leaves the new snapshot ACQUIRED and the pre-session gate closed. It is not treated as a successful repair. Existing verified history remains intact. The script exits 2 when gaps remain, 1 on a fatal setup/API error, and 0 only when all requested series are complete.
+
+## Calendar contract
+
+The calendar JSON must explicitly define:
+- exchange = NSE and timezone = Asia/Kolkata;
+- coverage_start and coverage_end;
+- every regular or special open session with exact open_at, close_at and source;
+- every closed date with source provenance;
+- a top-level source describing the official calendar/circular set.
+
+Do not assume every weekday is an ordinary session. Do not omit special weekend sessions, shortened sessions or exchange holidays. A date inside coverage with neither a session nor a closed-date entry is invalid. A date outside coverage is invalid.
+
+Example structure (illustrative schema only; not market calendar data):
+
+\`\`\`json
+{
+  "exchange": "NSE",
+  "timezone": "Asia/Kolkata",
+  "coverage_start": "YYYY-MM-DD",
+  "coverage_end": "YYYY-MM-DD",
+  "source": "Official NSE holiday circulars and special-session circulars",
+  "sessions": [
+    {
+      "date": "YYYY-MM-DD",
+      "open_at": "YYYY-MM-DDTHH:MM:SS+05:30",
+      "close_at": "YYYY-MM-DDTHH:MM:SS+05:30",
+      "source": "NSE circular reference"
+    }
+  ],
+  "closed_dates": ["YYYY-MM-DD"]
+}
+\`\`\`
+
+The example deliberately contains placeholders, not invented dates or sessions.
+
+## Historical request constraints
+
+The adapter uses Angel One's documented maximum request windows:
+- 1m: 30 days
+- 3m: 60 days
+- 5m / 10m: 100 days
+- 15m / 30m: 200 days
+- 1h: 400 days
+- 1d: 2000 days
+
+Request pacing defaults to one request per second and refuses a rate faster than three requests per second. Each response is filtered to the exact expected timestamps. Extra rows are not inserted as expected bars. The raw response is retained for diagnosis.
+
+## Important implementation limits
+
+- A complete calendar file is a hard prerequisite; the code does not fabricate a weekday calendar.
+- The NSE CSV represents current membership at capture time. It is not a historical point-in-time constituent archive. Backtests over past dates require archived official constituent snapshots and effective-date evidence.
+- Angel One may not return all requested bars. The system retries a bounded number of times and then blocks the gate if any expected timestamp remains absent.
+- This module is the first delivery layer. ICT scanning, paper trading, and dashboard integration follow only after the data gate is proven on authenticated local Angel One data.
