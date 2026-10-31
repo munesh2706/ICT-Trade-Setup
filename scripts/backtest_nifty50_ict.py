@@ -7,6 +7,7 @@ opt-in is required. All candles are reconciled from Angel One before replay.
 from __future__ import annotations
 
 import argparse
+import sys
 import json
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime, timedelta
@@ -15,6 +16,10 @@ from enum import Enum
 from pathlib import Path
 from uuid import uuid4
 from zoneinfo import ZoneInfo
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from scripts.reconcile_nifty50_history import load_calendar
 from ict_engine.stock_feed import AngelOneStockFeed
@@ -29,7 +34,6 @@ from ict_engine.paper_trading import StockPaperTradingEngine, load_paper_trading
 from ict_engine.performance import TradeResult, summarize_trades
 
 IST = ZoneInfo("Asia/Kolkata")
-ROOT = Path(__file__).resolve().parents[1]
 
 def encode(value):
     if isinstance(value, Decimal):
