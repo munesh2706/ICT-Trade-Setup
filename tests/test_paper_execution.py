@@ -52,3 +52,22 @@ def test_short_target_gap_gets_favourable_open_fill():
 def test_invalid_barrier_order_rejected():
     with pytest.raises(ValueError):
         resolve_barrier_exit(bar(100, 110, 90, 105), direction="long", stop=D("120"), target=D("110"))
+
+def test_short_stop_gap_fills_at_worse_open():
+    result = resolve_barrier_exit(bar(115, 120, 110, 112), direction="short", stop=D("110"), target=D("80"))
+    assert result.reason == "stop_loss"
+    assert result.price == D("115")
+    assert result.gap_through_stop
+
+
+def test_long_target_gap_gets_favourable_open_fill():
+    result = resolve_barrier_exit(bar(125, 130, 120, 128), direction="long", stop=D("90"), target=D("120"))
+    assert result.reason == "take_profit"
+    assert result.price == D("125")
+
+
+def test_short_same_bar_stop_and_target_uses_conservative_stop():
+    result = resolve_barrier_exit(bar(100, 115, 80, 95), direction="short", stop=D("110"), target=D("85"))
+    assert result.reason == "stop_loss"
+    assert result.price == D("110")
+    assert result.ambiguous_bar
