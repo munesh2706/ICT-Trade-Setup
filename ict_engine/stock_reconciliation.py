@@ -35,7 +35,7 @@ class ReconciliationResult:
     def total_missing(self) -> int:
         return sum(len(x.missing_after) for x in self.series)
 
-def _expected(calendar: ExchangeCalendar, dates: Sequence[date], timeframe: str, daily_anchor: str | None = None) -> list[datetime]:
+def _expected(calendar: ExchangeCalendar, dates: Sequence[date], timeframe: str, daily_anchor: str | None = None, *, cas_eligible: bool = False) -> list[datetime]:
     if timeframe not in INTERVAL_MINUTES:
         raise ValueError(f"unsupported timeframe {timeframe}")
     minutes = INTERVAL_MINUTES[timeframe]
@@ -49,7 +49,7 @@ def _expected(calendar: ExchangeCalendar, dates: Sequence[date], timeframe: str,
                 stamp = session.open_at if daily_anchor == "session_open" else datetime.combine(day, datetime.min.time(), calendar.timezone)
                 result.append(stamp.astimezone(calendar.timezone))
         else:
-            result.extend(calendar.expected_candle_starts(day, minutes))
+            result.extend(calendar.expected_candle_starts(day, minutes, cas_eligible=cas_eligible))
     return result
 
 def _contiguous_groups(missing: Sequence[datetime], expected: Sequence[datetime]) -> list[list[datetime]]:
@@ -126,7 +126,10 @@ def reconcile_universe(
             for member in universe.constituents:
                 symbol = member.symbol
                 key = (symbol, timeframe)
-                expected = _expected(calendar, trading_dates, timeframe, daily_anchor)
+                expected = _expected(
+                    calendar, trading_dates, timeframe, daily_anchor,
+                    cas_eligible=symbol in getattr(feed, "cas_eligible_symbols", set()),
+                )
                 if not expected:
                     raise ValueError(f"calendar produced no expected bars for {symbol}/{timeframe}")
                 expected_by_series[key] = expected
