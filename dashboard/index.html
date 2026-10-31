@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NIFTY 50 ICT Stock Scanner</title>
+<style>
+:root{color-scheme:dark;--bg:#081321;--panel:#102238;--line:#29435d;--text:#eef4fa;--muted:#9bb0c5;--gold:#ffbd38;--green:#35d39a;--red:#ff6c72;--blue:#55b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,Segoe UI,Arial,sans-serif}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-bottom:1px solid var(--line);background:#0b1a2b;position:sticky;top:0;z-index:5}
+h1{font-size:18px;margin:0;font-weight:750}.sub,.statusline{color:var(--muted);font-size:12px}.statusline{text-align:right}
+main{padding:18px;max-width:1800px;margin:auto}.stats{display:grid;grid-template-columns:repeat(6,minmax(110px,1fr));gap:10px;margin-bottom:16px}
+.stat,.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px}.stat{padding:12px 14px}.stat .label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.8px}.stat .value{font-size:23px;font-weight:750;margin-top:4px;font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:minmax(300px,.95fr) minmax(430px,1.4fr) minmax(310px,1fr);gap:12px;align-items:start}
+.panel{padding:14px;min-width:0}.panel h2{font-size:14px;margin:0 0 12px}
+.toolbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}input,select,button{background:#0b1a2b;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:inherit}input{min-width:100px;flex:1}button{cursor:pointer}
+table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;color:var(--muted);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line)}td{padding:9px 6px;border-bottom:1px solid #20384f;font-variant-numeric:tabular-nums}.stockrow{cursor:pointer}.stockrow:hover,.stockrow.selected{background:#19324b}
+.pill{display:inline-block;padding:2px 7px;border-radius:999px;background:#263b52;color:#d9e6f2;font-size:10px;white-space:nowrap}.bull,.good{color:var(--green)}.bear,.bad{color:var(--red)}.gold{color:var(--gold)}.muted{color:var(--muted)}
+.signal-list{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow:auto}.signal{padding:10px;border:1px solid var(--line);border-radius:8px;background:#0d1d30;cursor:pointer}.signal:hover,.signal.selected{border-color:var(--gold)}.signal-top{display:flex;justify-content:space-between;gap:8px;font-weight:700}.signal-meta{color:var(--muted);font-size:11px;margin-top:4px}
+.chartwrap{margin-top:12px;background:#0a1929;border:1px solid var(--line);border-radius:8px;padding:8px}.charthead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}.charthead strong{font-size:12px}canvas{width:100%;height:280px;display:block}
+.detail{font-size:12px}.detail h3{margin:0 0 6px;font-size:16px}.detail-section{border-top:1px solid var(--line);padding:10px 0}.detail-section h4{margin:0 0 6px;color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:.7px}.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px}.kv span:nth-child(odd){color:var(--muted)}.level{display:flex;justify-content:space-between;gap:10px;margin:3px 0}.assumption{padding:6px 8px;background:#1a3046;border-radius:5px;margin:4px 0;color:#c7d6e5}
+.lower{display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-top:12px}.scroll{overflow:auto;max-height:250px}.empty{padding:20px;text-align:center;color:var(--muted)}
+.footer{margin-top:14px;color:var(--muted);font-size:11px;text-align:right}
+@media(max-width:1200px){.grid{grid-template-columns:1fr 1fr}.grid .right{grid-column:1/-1}.stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){header{padding:12px;align-items:flex-start}.statusline{max-width:45%}main{padding:10px}.stats{grid-template-columns:repeat(2,1fr)}.grid,.lower{grid-template-columns:1fr}.grid .right{grid-column:auto}canvas{height:220px}.panel{padding:11px}}
+</style>
+</head>
+<body>
+<header><div><h1>NIFTY 50 · ICT STOCK SCANNER</h1><div class="sub">Angel One SmartAPI · NSE cash equities · Paper trading only</div></div><div class="statusline"><div id="connection">Waiting for session report…</div><div id="asof">—</div></div></header>
+<main>
+<section class="stats">
+<div class="stat"><div class="label">Stocks ready</div><div class="value" id="ready">—</div></div>
+<div class="stat"><div class="label">ICT signals</div><div class="value" id="signalCount">—</div></div>
+<div class="stat"><div class="label">Live quotes</div><div class="value" id="quoteCount">—</div></div>
+<div class="stat"><div class="label">Open paper trades</div><div class="value" id="openCount">—</div></div>
+<div class="stat"><div class="label">Closed today</div><div class="value" id="closedCount">—</div></div>
+<div class="stat"><div class="label">Paper realised P&L</div><div class="value" id="pnl">—</div></div>
+</section>
+<section class="grid">
+<div class="panel"><h2>Constituent monitor</h2><div class="toolbar"><input id="search" placeholder="Search symbol or company"><select id="stockFilter"><option value="all">All stocks</option><option value="signals">With signals</option><option value="ready">Data ready</option><option value="gaps">Data not ready</option></select></div>
+<div class="scroll"><table><thead><tr><th>Stock</th><th>LTP</th><th>Feed age</th><th>Data</th></tr></thead><tbody id="stocks"><tr><td colspan="4" class="empty">Waiting for report…</td></tr></tbody></table></div></div>
+<div class="panel"><h2>Detected ICT setups</h2><div class="toolbar"><select id="modelFilter"><option value="all">All models</option><option value="episode6">ICT 2022 Episode 6</option><option value="silver">Silver Bullet</option></select></div>
+<div id="signals" class="signal-list"><div class="empty">No signals loaded.</div></div>
+<div class="chartwrap"><div class="charthead"><strong id="chartTitle">Select a signal to inspect price structure</strong><select id="timeframe"><option>5m</option><option>1m</option><option>15m</option></select></div><canvas id="chart"></canvas></div></div>
+<div class="panel right"><h2>Signal explanation</h2><div id="detail" class="detail"><div class="empty">Select an ICT signal. The panel explains the liquidity event, MSS, FVG, targets and invalidation levels.</div></div></div>
+</section>
+<section class="lower">
+<div class="panel"><h2>Open paper positions</h2><div class="scroll"><table><thead><tr><th>Stock</th><th>Side</th><th>Entry</th><th>Stop</th><th>Target</th><th>Qty</th></tr></thead><tbody id="positions"><tr><td colspan="6" class="empty">No open positions.</td></tr></tbody></table></div></div>
+<div class="panel"><h2>Recent closed paper trades</h2><div class="scroll"><table><thead><tr><th>Stock</th><th>Side</th><th>Net P&L</th><th>R</th><th>Exit reason</th></tr></thead><tbody id="closed"><tr><td colspan="5" class="empty">No closed trades.</td></tr></tbody></table></div></div>
+</section>
+<div class="footer">No broker orders are sent. Signals and fills are derived from verified Angel One data only.</div>
+</main>
+<script>
+const state={data:null,selectedSignal:null,selectedSymbol:null,candles:[]};
+const $=id=>document.getElementById(id);
+const fmt=(v,d=2)=>{if(v===null||v===undefined||v==="")return "—";const n=Number(v);return Number.isFinite(n)?n.toLocaleString("en-IN",{maximumFractionDigits:d}):String(v)};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function pill(label,cls=""){return '<span class="pill '+cls+'">'+esc(label)+'</span>'}
+async function get(url){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error(await r.text());return r.json()}
+function renderStats(d){const o=d.overview||{};$("ready").textContent=(o.ready_stocks??0)+"/"+(o.total_stocks??50);$("signalCount").textContent=o.signals??0;$("quoteCount").textContent=o.live_ticks??0;$("openCount").textContent=o.open_positions??0;$("closedCount").textContent=o.paper_trades_closed??0;$("pnl").textContent=fmt(o.paper_realized_pnl);$("pnl").className="value "+(Number(o.paper_realized_pnl)>=0?"good":"bad");$("asof").textContent=d.as_of?"Last scan "+new Date(d.as_of).toLocaleTimeString():"No scan time";$("connection").textContent=d.status==="OK"?"Session report connected":"Waiting for session report"}
+function renderStocks(d){
+ const query=$("search").value.toLowerCase(),filter=$("stockFilter").value;
+ const rows=(d.stocks||[]).filter(x=>{const matches=(x.symbol+" "+x.company_name).toLowerCase().includes(query);const f=filter==="signals"?x.signals_count>0:filter==="ready"?x.status==="READY":filter==="gaps"?x.status!=="READY":true;return matches&&f});
+ $("stocks").innerHTML=rows.map(x=>{const q=x.quote,age=x.tick_age_seconds===null?"No tick":x.tick_age_seconds+"s",ltp=q?fmt(q.ltp):"—",status=x.status==="READY"?pill("READY","good"):pill("GAP / WAIT","bad");return '<tr class="stockrow '+(state.selectedSymbol===x.symbol?"selected":"")+'" data-symbol="'+esc(x.symbol)+'"><td><strong>'+esc(x.symbol)+'</strong><div class="muted">'+esc(x.company_name)+'</div></td><td>'+ltp+'</td><td>'+esc(age)+'</td><td>'+status+'</td></tr>'}).join("")||'<tr><td colspan="4" class="empty">No matching stocks.</td></tr>';
+ document.querySelectorAll(".stockrow").forEach(row=>row.addEventListener("click",()=>selectStock(row.dataset.symbol)));
+}
+function renderSignals(d){
+ const filter=$("modelFilter").value;
+ const signals=(d.signals||[]).filter(s=>filter==="all"||(filter==="episode6"&&s.model_id.includes("Episode_6"))||(filter==="silver"&&s.model_id.includes("SILVER_BULLET")));
+ $("signals").innerHTML=signals.map(s=>{const dir=s.direction==="bullish"?"bull":"bear",status=s.status==="ENTRY_ARMED"?(s.retest_time?"FVG RETEST":"LIMIT ARMED"):"ALERT / QUALIFIED";return '<div class="signal '+(state.selectedSignal?.signal_id===s.signal_id?"selected":"")+'" data-id="'+esc(s.signal_id)+'"><div class="signal-top"><span>'+esc(s.symbol)+' · <span class="'+dir+'">'+esc(s.direction.toUpperCase())+'</span></span>'+pill(status)+'</div><div class="signal-meta">'+esc(s.model_id)+' · '+new Date(s.available_at).toLocaleTimeString()+'</div><div class="signal-meta">FVG '+fmt(s.entry_zone_lower)+' – '+fmt(s.entry_zone_upper)+'</div></div>'}).join("")||'<div class="empty">No qualifying ICT setup at this scan time. No-trade is a valid result.</div>';
+ document.querySelectorAll(".signal").forEach(el=>el.addEventListener("click",()=>selectSignal(el.dataset.id)));
+}
+function renderPositions(d){
+ const open=d.open_positions||[];
+ $("positions").innerHTML=open.map(p=>'<tr><td><strong>'+esc(p.symbol)+'</strong><div class="muted">'+esc(p.model_id)+'</div></td><td>'+esc(p.direction)+'</td><td>'+fmt(p.entry_price)+'</td><td>'+fmt(p.stop)+'</td><td>'+fmt(p.target)+'</td><td>'+fmt(p.quantity,0)+'</td></tr>').join("")||'<tr><td colspan="6" class="empty">No open positions.</td></tr>';
+ const closed=(d.closed_trades||[]).slice(-30).reverse();
+ $("closed").innerHTML=closed.map(p=>'<tr><td>'+esc(p.symbol)+'</td><td>'+esc(p.direction)+'</td><td class="'+(Number(p.net_pnl)>=0?"good":"bad")+'">'+fmt(p.net_pnl)+'</td><td>'+fmt(p.r_multiple)+'</td><td>'+esc(p.exit_reason)+'</td></tr>').join("")||'<tr><td colspan="5" class="empty">No closed trades.</td></tr>';
+}
+function kv(label,value){return '<span>'+esc(label)+'</span><strong>'+esc(value??"—")+'</strong>'}
+function renderDetail(s,paperStatus,events){
+ if(!s){$("detail").innerHTML='<div class="empty">Select an ICT signal.</div>';return}
+ const targets=(s.draw_targets||[]).map(x=>'<div class="level"><span>'+esc(x.name)+' · '+esc(x.source)+'</span><strong>'+fmt(x.price)+'</strong></div>').join("")||'<div class="muted">No external target supplied.</div>';
+ const invalid=(s.invalidation_references||[]).map((x,i)=>'<div class="level"><span>Stop reference '+(i+1)+'</span><strong>'+fmt(x)+'</strong></div>').join("")||'<div class="muted">No stop variant is defined.</div>';
+ const assumptions=(s.assumptions||[]).map(x=>'<div class="assumption">'+esc(x)+'</div>').join("");
+ const ctx=s.context||{};
+ const history=(events||[]).map(e=>'<div class="level"><span>'+esc(e.status)+' · '+esc(e.reason)+'</span><span>'+new Date(e.timestamp).toLocaleTimeString()+'</span></div>').join("")||'<div class="muted">No journal events.</div>';
+ $("detail").innerHTML='<h3>'+esc(s.symbol)+' <span class="'+(s.direction==="bullish"?"bull":"bear")+'">'+esc(s.direction.toUpperCase())+'</span></h3><div class="muted">'+esc(s.company_name)+' · '+esc(s.model_id)+'</div>'+
+ '<div class="detail-section"><h4>Signal state</h4><div class="kv">'+kv("Scanner status",s.status)+kv("Paper status",paperStatus||"not persisted")+kv("Available from",new Date(s.available_at).toLocaleString())+kv("FVG retest",s.retest_time?new Date(s.retest_time).toLocaleTimeString():"Not observed yet")+'</div></div>'+
+ '<div class="detail-section"><h4>1 · Liquidity event</h4><div class="kv">'+kv("Reference",s.sweep_name||"Draw on liquidity")+kv("Reference price",fmt(s.sweep_price??s.draw_targets?.[0]?.price))+kv("Sweep extreme",fmt(s.sweep_extreme))+'</div></div>'+
+ '<div class="detail-section"><h4>2 · Market structure shift</h4><div class="kv">'+kv("MSS candle close",s.mss_time?new Date(s.mss_time).toLocaleTimeString():"—")+kv("Broken swing",fmt(s.mss_level))+kv("Body / range",fmt(s.displacement_body_to_range,3))+'</div></div>'+
+ '<div class="detail-section"><h4>3 · Fair Value Gap</h4><div class="kv">'+kv("FVG zone",fmt(s.entry_zone_lower)+" – "+fmt(s.entry_zone_upper))+kv("Entry reference",fmt(s.entry_reference))+kv("First candle",s.fvg_first_time?new Date(s.fvg_first_time).toLocaleTimeString():"—")+kv("Third candle",s.fvg_third_time?new Date(s.fvg_third_time).toLocaleTimeString():"—")+'</div></div>'+
+ '<div class="detail-section"><h4>4 · Liquidity objectives</h4>'+targets+'</div><div class="detail-section"><h4>5 · Invalidation references</h4>'+invalid+'</div>'+
+ '<div class="detail-section"><h4>Market context</h4><div class="kv">'+kv("Weekly range location",ctx.price_location_in_previous_week_range||"Unavailable")+kv("Previous day high",fmt(ctx.previous_day_high))+kv("Previous day low",fmt(ctx.previous_day_low))+kv("Previous week high",fmt(ctx.previous_week_high))+kv("Previous week low",fmt(ctx.previous_week_low))+'</div></div>'+
+ '<div class="detail-section"><h4>Engineering assumptions</h4>'+assumptions+'</div><div class="detail-section"><h4>Event history</h4>'+history+'</div>';
+}
+async function selectSignal(id){const s=(state.data?.signals||[]).find(x=>x.signal_id===id);if(!s)return;state.selectedSignal=s;state.selectedSymbol=s.symbol;renderStocks(state.data);renderSignals(state.data);try{const detail=await get("/api/signals/"+encodeURIComponent(id));renderDetail(detail.signal,detail.paper_status,detail.events)}catch(e){renderDetail(s,"unavailable",[])}await loadChart()}
+async function selectStock(symbol){state.selectedSymbol=symbol;state.selectedSignal=null;renderStocks(state.data);renderDetail(null);$("chartTitle").textContent=symbol+" · "+$("timeframe").value;await loadChart()}
+async function loadChart(){const symbol=state.selectedSignal?.symbol||state.selectedSymbol;if(!symbol)return;const tf=$("timeframe").value;$("chartTitle").textContent=symbol+" · "+tf+" · verified Angel One candles";try{const data=await get("/api/candles/"+encodeURIComponent(symbol)+"?timeframe="+tf+"&limit=150");state.candles=data.candles||[];drawChart(state.candles,state.selectedSignal)}catch(e){state.candles=[];drawChart([],state.selectedSignal)}}
+function drawChart(candles,signal){
+ const canvas=$("chart"),ctx=canvas.getContext("2d"),rect=canvas.getBoundingClientRect(),ratio=window.devicePixelRatio||1;canvas.width=Math.max(320,rect.width*ratio);canvas.height=280*ratio;ctx.scale(ratio,ratio);const w=canvas.width/ratio,h=280;ctx.clearRect(0,0,w,h);ctx.fillStyle="#0a1929";ctx.fillRect(0,0,w,h);
+ if(!candles.length){ctx.fillStyle="#9bb0c5";ctx.fillText("No verified candles for this symbol/timeframe.",12,30);return}
+ let values=[];candles.forEach(c=>values.push(Number(c.high),Number(c.low)));const lines=[];
+ if(signal){lines.push({v:Number(signal.entry_zone_lower),label:"FVG lower",color:"#ffbd38",dash:[4,3]},{v:Number(signal.entry_zone_upper),label:"FVG upper",color:"#ffbd38",dash:[4,3]});(signal.invalidation_references||[]).forEach((v,i)=>lines.push({v:Number(v),label:"Stop ref "+(i+1),color:"#ff6c72",dash:[5,4]}));(signal.draw_targets||[]).forEach(x=>lines.push({v:Number(x.price),label:x.name,color:"#35d39a",dash:[5,4]}));if(signal.entry_reference!==null&&signal.entry_reference!==undefined)lines.push({v:Number(signal.entry_reference),label:"Entry ref",color:"#55b8ff",dash:[2,3]})}
+ lines.forEach(x=>values.push(x.v));let min=Math.min(...values),max=Math.max(...values);if(max===min){max+=1;min-=1}
+ const pad={l:12,r:75,t:12,b:26},plotW=w-pad.l-pad.r,plotH=h-pad.t-pad.b,y=v=>pad.t+(max-v)/(max-min)*plotH;
+ ctx.strokeStyle="#20384f";ctx.lineWidth=1;for(let i=0;i<5;i++){const yy=pad.t+i*plotH/4;ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(w-pad.r,yy);ctx.stroke();ctx.fillStyle="#8fa6bc";ctx.fillText((max-(max-min)*i/4).toFixed(2),w-pad.r+5,yy+3)}
+ if(signal){const y1=y(Number(signal.entry_zone_upper)),y2=y(Number(signal.entry_zone_lower));ctx.fillStyle="rgba(255,189,56,.12)";ctx.fillRect(pad.l,Math.min(y1,y2),plotW,Math.abs(y2-y1))}
+ const step=plotW/candles.length,cw=Math.max(2,step*.58);candles.forEach((c,i)=>{const x=pad.l+i*step+step/2,o=Number(c.open),hi=Number(c.high),lo=Number(c.low),cl=Number(c.close),up=cl>=o;ctx.strokeStyle=up?"#35d39a":"#ff6c72";ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.moveTo(x,y(hi));ctx.lineTo(x,y(lo));ctx.stroke();const top=Math.min(y(o),y(cl)),height=Math.max(1,Math.abs(y(o)-y(cl)));ctx.fillRect(x-cw/2,top,cw,height)});
+ lines.forEach(x=>{const yy=y(x.v);ctx.save();ctx.strokeStyle=x.color;ctx.setLineDash(x.dash);ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(w-pad.r,yy);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=x.color;ctx.fillText(x.label,w-pad.r+5,yy-3);ctx.restore()});
+ ctx.fillStyle="#8fa6bc";ctx.fillText(new Date(candles[0].timestamp).toLocaleTimeString(),pad.l,h-6);ctx.fillText(new Date(candles[candles.length-1].timestamp).toLocaleTimeString(),w-pad.r-50,h-6);
+}
+async function refresh(){try{const d=await get("/api/state");state.data=d;renderStats(d);renderStocks(d);renderSignals(d);renderPositions(d);if(state.selectedSignal){const still=(d.signals||[]).find(x=>x.signal_id===state.selectedSignal.signal_id);if(still){state.selectedSignal=still}else{state.selectedSignal=null;renderDetail(null)}}if(!state.selectedSymbol&&d.stocks?.length)state.selectedSymbol=d.stocks[0].symbol}catch(e){$("connection").textContent="Dashboard API unavailable";$("connection").className="bad"}}
+$("search").addEventListener("input",()=>state.data&&renderStocks(state.data));$("stockFilter").addEventListener("change",()=>state.data&&renderStocks(state.data));$("modelFilter").addEventListener("change",()=>state.data&&renderSignals(state.data));$("timeframe").addEventListener("change",loadChart);window.addEventListener("resize",()=>drawChart(state.candles,state.selectedSignal));refresh().then(loadChart);setInterval(refresh,5000);
+</script>
+</body>
+</html>
