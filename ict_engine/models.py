@@ -15,8 +15,12 @@ class Candle:
     volume: Decimal = Decimal("0")
 
     def __post_init__(self) -> None:
-        if self.timestamp.tzinfo is None:
+        if self.timestamp.tzinfo is None or self.timestamp.utcoffset() is None:
             raise ValueError("Candle timestamp must be timezone-aware")
+        if not all(v.is_finite() for v in (self.open, self.high, self.low, self.close, self.volume)):
+            raise ValueError("Candle OHLCV values must be finite")
+        if min(self.open, self.high, self.low, self.close) <= 0:
+            raise ValueError("Candle prices must be positive")
         if self.high < max(self.open, self.close, self.low):
             raise ValueError("Candle high is inconsistent with OHLC")
         if self.low > min(self.open, self.close, self.high):
