@@ -62,7 +62,7 @@ def _body_to_range(candle: Candle) -> Decimal:
     full_range = candle.high - candle.low
     return ZERO if full_range == ZERO else abs(candle.close - candle.open) / full_range
 
-def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivot_right: int, displacement_min_body_to_range: Decimal) -> list[ICT2022SetupCandidate]:
+def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivot_right: int, displacement_min_body_to_range: Decimal, max_bars_after_sweep: int, max_bars_after_mss: int) -> list[ICT2022SetupCandidate]:
     """Detect Episode 6 sweep -> displacement/MSS -> in-leg FVG candidates.
 
     Only completed candles should be passed. Pivot widths and displacement
@@ -70,6 +70,8 @@ def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivo
     """
     if not ZERO < displacement_min_body_to_range <= Decimal("1"):
         raise ValueError("displacement_min_body_to_range must be in (0, 1]")
+    if max_bars_after_sweep < 1 or max_bars_after_mss < 1:
+        raise ValueError("max_bars_after_sweep and max_bars_after_mss must be >= 1")
     swings = confirmed_swings(candles, pivot_left, pivot_right)
     gaps = fair_value_gaps(candles)
     sweeps = liquidity_sweeps(candles, swings)
@@ -90,7 +92,8 @@ def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivo
         # Find the first completed displacement candle that closes through
         # the pre-sweep short-term swing.
         mss = None
-        for j in range(sweep.candle_index + 1, len(candles)):
+        sweep_deadline = min(len(candles), sweep.candle_index + max_bars_after_sweep + 1)
+        for j in range(sweep.candle_index + 1, sweep_deadline):
             candle = candles[j]
             breaks = candle.close < broken.price if direction == "bearish" else candle.close > broken.price
             strength = _body_to_range(candle)
@@ -150,6 +153,7 @@ def detect_ict_2022_episode6(candles: Sequence[Candle], *, pivot_left: int, pivo
             assumptions=(
                 f"pivot_left={pivot_left}, pivot_right={pivot_right}",
                 f"displacement_min_body_to_range={displacement_min_body_to_range}",
+                f"max_bars_after_sweep={max_bars_after_sweep}, max_bars_after_mss={max_bars_after_mss}",
                 "strict unique local pivots are an engineering definition",
                 "entry/invalidation references require a selected execution variant",
             ),
