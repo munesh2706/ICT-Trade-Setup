@@ -27,7 +27,7 @@ $env:ICT_HISTORY_START_DATE = "2026-01-01"
 python scripts\run_nifty50_session.py --calendar data\calendars\nse_2026_through_2026-11-07.json --paper-config config\paper_trading.json
 ~~~
 
-The runner authenticates once, downloads the current NSE constituent list and Angel One instrument master, performs full historical reconciliation, then starts the WebSocket quote stream and current-session candle refresh. It waits for market open when started pre-market, polls completed 1m candles every minute, 5m candles at 5-minute boundaries and 15m candles at 15-minute boundaries, runs the scanner, and writes JSON reports to data/reports. The first bootstrap may take several minutes because Angel One historical request limits apply. Later sessions request only gaps.
+The runner authenticates once, downloads the current NSE constituent list and Angel One instrument master, performs full historical reconciliation, then starts the WebSocket quote stream and current-session candle refresh. It waits for market open when started pre-market, polls completed 1m candles every minute, 5m candles at 5-minute boundaries and 15m candles at 15-minute boundaries, runs the scanner, and writes JSON reports to data/reports. Each scan cycle also requests an Angel One FULL quote snapshot as fallback for missing/stale WebSocket quotes. Quote freshness is measured from the exchange timestamp; unresolved stale/missing quotes remain explicitly marked stale. The scanner and paper engine use completed verified historical candles, never stale LTPs. The first bootstrap may take several minutes because Angel One historical request limits apply. Later sessions request only gaps.
 
 The runner:
 - refreshes the official NSE NIFTY 50 constituent list;
@@ -59,7 +59,7 @@ Use local_midnight instead only if verified against the provider's actual daily 
 
 The individual `refresh_nifty50_live_session.py` and `scan_nifty50_stocks.py` commands are available for one-shot diagnostics. The normal live workflow is the long-running `run_nifty50_session.py` process above; do not launch a new Python process and re-authenticate for every minute.
 
-A stock is eligible for scanning only when its completed current-session 1m, 5m and 15m grids are present in verified storage. The WebSocket V2 feed is for live quote display/monitoring; it is not used to synthesize OHLCV. The scanner returns per-stock readiness and explainable ICT candidates. The current CLI emits JSON; the visual dashboard remains a subsequent milestone.
+A stock is eligible for scanning only when its completed current-session 1m, 5m and 15m grids are present in verified storage. The WebSocket V2 feed and FULL quote fallback are for live quote display/monitoring; neither is used to synthesize OHLCV. The scanner returns per-stock readiness and explainable ICT candidates. The local visual dashboard is available through dashboard/app.py; start it in a second terminal with the command below.
 
 
 ## Visual dashboard
