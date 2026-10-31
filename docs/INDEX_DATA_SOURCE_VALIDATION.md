@@ -1,7 +1,7 @@
 # Index Market-Data Source Validation
 
 **Review date:** 2026-10-30  
-**Status:** API capability and instrument identifiers documented; authenticated end-to-end validation is still pending.
+**Status:** API capability and instrument identifiers documented; a local read-only validation harness is implemented; authenticated end-to-end validation is still pending.
 
 ## 1. Scope
 
@@ -114,6 +114,14 @@ A data source is marked **VALIDATED** for an index only after all applicable aut
 
 No ICT strategy implementation should depend on a data source marked pending or failed.
 
-## 7. Current decision
+## 7. Validation harness status
 
-**Proceed to implement an index-only, read-only validation harness. Do not yet build the production collector or ICT signal engine on the assumption that the copied stock collector works unchanged.**
+A local read-only harness is implemented at `scripts/validate_angel_index_data.py`; setup and execution instructions are in `docs/RUN_INDEX_DATA_VALIDATION.md`. It checks the current instrument master, performs authenticated historical requests for 1m/5m/15m for each index, compares provider OHLC with 1m-derived bars, requests FULL live quotes, and optionally performs a short WebSocket smoke test. It writes a sanitized JSON report under `data/reports/`.
+
+The harness spaces historical requests by 0.4 seconds (below the documented 3 requests/second ceiling). Angel One's published rate-limit table lists 3 historical candle requests/second, but recent forum reports describe intermittent historical-endpoint rate-limit rejections even at low request volumes; treat a 403 as a provider-side failure to investigate, not proof that credentials or instrument tokens are wrong.
+
+The harness has **not** been run with the user's authenticated local credentials. Therefore the actual feed remains unvalidated until its report is reviewed.
+
+## 8. Current decision
+
+**Run the local validation harness and review its report. Do not yet build the production collector or ICT signal engine on the assumption that the copied stock collector works unchanged.**
