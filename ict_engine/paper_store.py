@@ -85,14 +85,14 @@ class StockPaperStore:
         changed = created
         if current == SignalStatus.WATCHING:
             changed = self.append_event(
-                f"{signal.signal_id}:qualified", signal.signal_id, signal.available_at,
+                f"{signal.signal_id}:qualified", signal.signal_id, observed_at,
                 SignalStatus.QUALIFIED, "ICT model conditions confirmed", evidence_ref=signal.source_id,
             ) or changed
             current = self.signal_status(signal.signal_id)
         if signal.status == "ENTRY_ARMED" and current == SignalStatus.QUALIFIED:
             changed = self.append_event(
                 f"{signal.signal_id}:entry-armed", signal.signal_id,
-                signal.available_at, SignalStatus.ENTRY_ARMED,
+                observed_at, SignalStatus.ENTRY_ARMED,
                 "Completed candle intersected the FVG entry zone", evidence_ref=signal.source_id,
             ) or changed
         return changed
