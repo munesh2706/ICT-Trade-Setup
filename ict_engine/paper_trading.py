@@ -300,7 +300,14 @@ class StockPaperTradingEngine:
         for signal in report.signals:
             if journal.register_signal(signal, evidence=_signal_evidence(signal), observed_at=report.as_of):
                 registered += 1
-            if journal.signal_status(signal.signal_id) != SignalStatus.ENTRY_ARMED:
+            current_status = journal.signal_status(signal.signal_id)
+            if "SILVER_BULLET" in signal.model_id.upper() and current_status == SignalStatus.QUALIFIED:
+                self._event(journal, signal, SignalStatus.NO_TRADE, report,
+                            "Silver Bullet remains an alert-only model until its entry chronology is implemented",
+                            "no-trade-silver-bullet")
+                no_trade += 1
+                continue
+            if current_status != SignalStatus.ENTRY_ARMED:
                 continue
             if journal.has_position_for_signal(signal.signal_id):
                 continue
