@@ -18,7 +18,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.reconcile_nifty50_history import load_calendar
 from ict_engine.stock_feed import INTERVAL_MINUTES, AngelOneStockFeed
-from ict_engine.stock_universe import download_angelone_master, download_nse_universe
+from ict_engine.stock_universe import download_nse_universe
 
 TIMEFRAMES = ("1m", "5m", "15m")
 
@@ -47,16 +47,11 @@ def main() -> int:
         raise SystemExit(f"{args.date} is explicitly a closed NSE date")
     universe = download_nse_universe()
     feed = AngelOneStockFeed.connect_from_env(universe, pace_seconds=args.pace_seconds)
-    master_rows, master_digest = download_angelone_master()
     members = {member.symbol for member in universe.constituents}
-    nfo_stock_futures = {
-        str(row.get("name", "")).strip().upper()
-        for row in master_rows
-        if str(row.get("exch_seg", "")).strip().upper() == "NFO"
-        and str(row.get("instrumenttype", "")).strip().upper() == "FUTSTK"
-        and str(row.get("name", "")).strip().upper() in members
-    }
+    nfo_stock_futures = set(feed.cas_eligible_symbols)
     symbol = universe.constituents[0].symbol
+    cas_eligible = symbol in nfo_stock_futures
+    continuous_close = session.continuous_close_at if cas_eligible and session.continuous_close_at else close_at
     open_at = session.open_at
     close_at = session.close_at
     split_at = open_at.replace(hour=12, minute=15, second=0, microsecond=0)
@@ -68,8 +63,10 @@ def main() -> int:
         "symbol": symbol,
         "token": feed.instruments[symbol].token,
         "instrument_master_sha256": feed.master_sha256,
-        "derivatives_master_sha256": master_digest,
+        "derivatives_master_sha256": feed.master_sha256,
         "cas_eligibility_proxy": "Angel One NFO FUTSTK rows for current NIFTY 50 membership",
+        "symbol_cas_eligible": cas_eligible,
+        "continuous_close": continuous_close.isoformat(),
         "nifty50_stock_futures_symbols": sorted(nfo_stock_futures),
         "nifty50_without_stock_futures": sorted(members - nfo_stock_futures),
         "session_open": open_at.isoformat(),
@@ -83,23 +80,30 @@ def main() -> int:
         second = feed.fetch_candles(symbol, timeframe, split_at, close_at)
         expected = {
             stamp.isoformat()
-            for stamp in calendar.expected_candle_starts(args.date, INTERVAL_MINUTES[timeframe])
+            for stamp in calendar.expected_candle_starts(
+                args.date, INTERVAL_MINUTES[timeframe], cas_eligible=cas_eligible,
+            )
         }
-        full_stamps = {row.timestamp.isoformat() for row in full}
+        full_continuous = [row for row in full if row.timestamp < continuous_close]
         split_rows = first + second
-        split_stamps = {row.timestamp.isoformat() for row in split_rows}
+        split_continuous = [row for row in split_rows if row.timestamp < continuous_close]
+        full_continuous_stamps = {row.timestamp.isoformat() for row in full_continuous}
+        split_continuous_stamps = {row.timestamp.isoformat() for row in split_continuous}
+        auction_rows = [row for row in full if row.timestamp >= continuous_close]
         report["timeframes"][timeframe] = {
-            "expected_count": len(expected),
-            "missing_from_full": sorted(expected - full_stamps),
-            "unexpected_in_full": sorted(full_stamps - expected),
-            "missing_from_split_union": sorted(expected - split_stamps),
-            "full_session": describe(full),
+            "expected_continuous_count": len(expected),
+            "missing_from_continuous_session": sorted(expected - full_continuous_stamps),
+            "unexpected_in_continuous_session": sorted(full_continuous_stamps - expected),
+            "missing_from_split_continuous_union": sorted(expected - split_continuous_stamps),
+            "full_session_raw": describe(full),
+            "continuous_session_from_full_request": describe(full_continuous),
+            "auction_period_rows_from_full_request": describe(auction_rows),
             "first_segment": describe(first),
             "second_segment": describe(second),
-            "split_union_count": len(split_stamps),
-            "full_only_count": len(full_stamps - split_stamps),
-            "split_only_count": len(split_stamps - full_stamps),
-            "split_recovers_timestamps_absent_from_full": bool(split_stamps - full_stamps),
+            "split_continuous_union_count": len(split_continuous_stamps),
+            "full_only_continuous_count": len(full_continuous_stamps - split_continuous_stamps),
+            "split_only_continuous_count": len(split_continuous_stamps - full_continuous_stamps),
+            "split_recovers_continuous_timestamps_absent_from_full": bool(split_continuous_stamps - full_continuous_stamps),
             "raw_request_params": [
                 feed.raw_responses[-3]["request_params"],
                 feed.raw_responses[-2]["request_params"],
