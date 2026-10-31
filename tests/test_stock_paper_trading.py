@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from decimal import Decimal as D
 from zoneinfo import ZoneInfo
 
@@ -129,9 +129,9 @@ def test_pending_paper_signal_expires_at_exchange_session_close(tmp_path):
 
 def test_paper_engine_does_not_fill_from_cas_auction_candle(tmp_path):
     candles, journal, engine = make_engine(tmp_path)
-    sig = signal()
+    sig = replace(signal(), available_at=datetime(2026, 10, 30, 15, 27, tzinfo=IST))
     engine.process_scan_report(
-        report(sig, datetime(2026, 10, 30, 10, 0, tzinfo=IST)),
+        report(sig, datetime(2026, 10, 30, 15, 27, tzinfo=IST)),
         candles=candles, journal=journal,
     )
     auction = Candle(
