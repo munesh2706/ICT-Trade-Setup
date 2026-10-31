@@ -128,7 +128,7 @@ def reconcile_universe(
                 expected_by_series[key] = expected
                 range_start = expected[0]
                 range_end = expected[-1] + timedelta(minutes=INTERVAL_MINUTES[timeframe])
-                existing = store.load_reconciliation_candles(symbol, timeframe, range_start, range_end)
+                existing = store.load_reconciliation_candles(symbol, timeframe, range_start, range_end, universe.snapshot_id)
                 present = {c.timestamp.astimezone(IST) for c in existing}
                 missing = [x for x in expected if x not in present]
                 before_counts[key] = len(expected) - len(missing)
@@ -173,7 +173,7 @@ def reconcile_universe(
                                     feed.instruments[symbol].token, exact,
                                 )
                                 fetched_counts[key] += inserted
-                    current = store.load_reconciliation_candles(symbol, timeframe, range_start, range_end)
+                    current = store.load_reconciliation_candles(symbol, timeframe, range_start, range_end, universe.snapshot_id)
                     present = {c.timestamp.astimezone(IST) for c in current}
                     missing = [x for x in expected if x not in present]
 
@@ -192,7 +192,7 @@ def reconcile_universe(
         symbol, timeframe = key
         range_start = expected[0]
         range_end = expected[-1] + timedelta(minutes=INTERVAL_MINUTES[timeframe])
-        candles = store.load_reconciliation_candles(symbol, timeframe, range_start, range_end)
+        candles = store.load_reconciliation_candles(symbol, timeframe, range_start, range_end, universe.snapshot_id)
         present = {c.timestamp.astimezone(IST) for c in candles}
         missing = tuple(sorted(x.isoformat() for x in expected if x not in present))
         unexpected = tuple(sorted(c.timestamp.isoformat() for c in candles if c.timestamp.astimezone(IST) not in set(expected)))
