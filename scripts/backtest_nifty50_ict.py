@@ -120,8 +120,7 @@ def run_backtest(args) -> dict:
     scanner = StockICTScanner(StockICTScanConfig(enable_silver_bullet=not args.disable_silver_bullet))
     scan_count = 0
     skipped = []
-    try:
-        for session in replay_sessions:
+    for session in replay_sessions:
             as_of = session.open_at.astimezone(IST) + timedelta(minutes=1)
             close_at = session.close_at.astimezone(IST)
             while as_of <= close_at:
@@ -193,8 +192,6 @@ def run_backtest(args) -> dict:
         report_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
         result["report_path"] = str(report_path)
         return result
-    finally:
-        feed.logout()
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Angel One NIFTY 50 stock ICT historical paper backtest")
