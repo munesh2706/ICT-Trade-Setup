@@ -5,7 +5,7 @@ source-versioned; engineering thresholds are surfaced on every signal.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from hashlib import sha256
@@ -213,7 +213,7 @@ def _episode6_signal(
         max_bars_after_mss=config.max_bars_after_mss,
         external_liquidity_levels=levels,
     )
-    result = []
+    result_by_id: dict[str, StockSignal] = {}
     for candidate in candidates:
         available_at = recent[candidate.available_at_index].timestamp + timedelta(minutes=5)
         if available_at.date() != scan_date or available_at > as_of:
@@ -236,9 +236,13 @@ def _episode6_signal(
             sweep_price = sweep.reference_price
             sweep_extreme = sweep.extreme
         targets = directional_target_candidates(candidate.direction, candidate.entry_reference, levels)
-        result.append(StockSignal(
-            _signal_id(symbol, candidate.model, candidate.direction, available_at, lower, upper,
-                       f"{sweep_name}:{sweep_price}"),
+        signal_id = _signal_id(symbol, candidate.model, candidate.direction, available_at, lower, upper)
+        signal_context = dict(context or {})
+        signal_context["primary_liquidity_sweep"] = {
+            "name": sweep_name, "price": sweep_price, "extreme": sweep_extreme,
+        }
+        signal = StockSignal(
+            signal_id,
             symbol, company_name, candidate.model, candidate.direction,
             "ENTRY_ARMED" if retest else "QUALIFIED_WAITING_FOR_FVG_RETRACE",
             available_at, lower, upper, candidate.entry_reference,
@@ -249,15 +253,26 @@ def _episode6_signal(
             recent[gap.middle_candle_index].timestamp,
             recent[gap.third_candle_index].timestamp,
             retest.timestamp + timedelta(minutes=1) if retest else None,
-            targets, context or {},
+            targets, signal_context,
             candidate.assumptions + (
                 "setup detection uses completed 5m candles only",
                 "1m FVG-zone intersection is a retest alert, not a guaranteed fill",
                 "entry price and stop variant are not selected by the scanner",
+                "multiple liquidity raids producing the same FVG are consolidated into one signal",
             ),
             candidate.source_id,
-        ))
-    return result
+        )
+        previous = result_by_id.get(signal_id)
+        if previous is None:
+            signal_context["additional_liquidity_sweeps"] = []
+            result_by_id[signal_id] = replace(signal, context=signal_context)
+        else:
+            updated_context = dict(previous.context)
+            additional = list(updated_context.get("additional_liquidity_sweeps", []))
+            additional.append({"name": sweep_name, "price": sweep_price, "extreme": sweep_extreme})
+            updated_context["additional_liquidity_sweeps"] = additional
+            result_by_id[signal_id] = replace(previous, context=updated_context)
+    return list(result_by_id.values())
 
 def _silver_bullet_signals(
     symbol: str,
