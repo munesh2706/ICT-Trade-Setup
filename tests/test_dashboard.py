@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 
 from dashboard import app as dashboard_app
 
@@ -17,7 +18,7 @@ def test_dashboard_state_exposes_verified_stock_and_signal_health(tmp_path, monk
     monkeypatch.setattr(dashboard_app, "DATABASE", db)
     report = {
         "status": "OK",
-        "as_of": "2026-10-30T10:00:00+05:30",
+        "as_of": datetime.now(timezone.utc).isoformat(),
         "scan_date": "2026-10-30",
         "universe_snapshot_id": "universe-1",
         "total_stocks": 50,
