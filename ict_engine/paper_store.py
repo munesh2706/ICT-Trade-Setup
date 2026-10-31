@@ -92,7 +92,7 @@ class StockPaperStore:
         if signal.status == "ENTRY_ARMED" and current == SignalStatus.QUALIFIED:
             changed = self.append_event(
                 f"{signal.signal_id}:entry-armed", signal.signal_id,
-                signal.retest_time or signal.available_at, SignalStatus.ENTRY_ARMED,
+                signal.available_at, SignalStatus.ENTRY_ARMED,
                 "Completed candle intersected the FVG entry zone", evidence_ref=signal.source_id,
             ) or changed
         return changed
