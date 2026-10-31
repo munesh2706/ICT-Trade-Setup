@@ -81,18 +81,21 @@ class StockPaperStore:
             if not created:
                 db.execute("UPDATE paper_signals SET evidence_json=?,updated_at_utc=? WHERE signal_id=?",
                            (evidence_json, observed, signal.signal_id))
-                return False
-        self.append_event(
-            f"{signal.signal_id}:qualified", signal.signal_id, signal.available_at,
-            SignalStatus.QUALIFIED, "ICT model conditions confirmed", evidence_ref=signal.source_id,
-        )
-        if signal.status == "ENTRY_ARMED":
-            self.append_event(
+        current = SignalStatus.WATCHING if created else self.signal_status(signal.signal_id)
+        changed = created
+        if current == SignalStatus.WATCHING:
+            changed = self.append_event(
+                f"{signal.signal_id}:qualified", signal.signal_id, signal.available_at,
+                SignalStatus.QUALIFIED, "ICT model conditions confirmed", evidence_ref=signal.source_id,
+            ) or changed
+            current = self.signal_status(signal.signal_id)
+        if signal.status == "ENTRY_ARMED" and current == SignalStatus.QUALIFIED:
+            changed = self.append_event(
                 f"{signal.signal_id}:entry-armed", signal.signal_id,
                 signal.retest_time or signal.available_at, SignalStatus.ENTRY_ARMED,
                 "Completed candle intersected the FVG entry zone", evidence_ref=signal.source_id,
-            )
-        return True
+            ) or changed
+        return changed
 
     def append_event(self, event_id: str, signal_id: str, timestamp: datetime,
                      target_status: SignalStatus, reason: str, *,
