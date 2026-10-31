@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from dataclasses import asdict
 from decimal import Decimal as D
 from zoneinfo import ZoneInfo
 
@@ -111,3 +112,15 @@ def test_paper_engine_rejects_same_bar_entry_and_stop_ambiguity(tmp_path):
     assert result.positions_opened==0
     assert result.signals_no_trade==1
     assert result.open_positions==0
+
+
+def test_pending_paper_signal_expires_at_exchange_session_close(tmp_path):
+    candles,journal,engine=make_engine(tmp_path)
+    sig=signal()
+    journal.register_signal(sig,evidence=asdict(sig),observed_at=sig.available_at)
+    expired=engine.expire_pending_signals(
+        journal,datetime(2026,10,30,15,30,tzinfo=IST),
+    )
+    assert expired==1
+    assert journal.signal_status(sig.signal_id).value=="expired"
+    assert journal.pending_signals()==[]
