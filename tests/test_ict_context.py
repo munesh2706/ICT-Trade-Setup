@@ -91,4 +91,4 @@ def test_market_context_combines_day_week_and_equal_liquidity_without_bias():
     )
     assert context.price_location == "equilibrium"
     assert [x.price for x in context.draws_above] == [D("110"), D("115"), D("120")]
-    assert [x.price for x in context.draws_below] == [D("90"), D("85")]
+    assert [x.price for x in context.draws_below] == [D("90"), D("85"), D("80")]
