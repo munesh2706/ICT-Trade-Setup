@@ -384,13 +384,13 @@ class StockICTScanner:
         ready = 0
         for member in universe.constituents:
             raw_1m = store.load_verified_candles(
-                member.symbol, "1m", limit=self.config.max_1m_lookback_bars + 375,
+                member.symbol, "1m", end=as_of, limit=self.config.max_1m_lookback_bars + 375,
             )
             raw_5m = store.load_verified_candles(
-                member.symbol, "5m", limit=self.config.max_5m_lookback_bars + 75,
+                member.symbol, "5m", end=as_of, limit=self.config.max_5m_lookback_bars + 75,
             )
             raw_15m = store.load_verified_candles(
-                member.symbol, "15m", limit=self.config.max_15m_context_bars,
+                member.symbol, "15m", end=as_of, limit=self.config.max_15m_context_bars,
             )
             for timeframe, values in (("1m", raw_1m), ("5m", raw_5m), ("15m", raw_15m)):
                 _validate_candles(values, member.symbol, timeframe)
