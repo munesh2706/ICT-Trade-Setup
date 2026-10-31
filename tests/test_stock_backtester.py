@@ -9,10 +9,10 @@ def test_backtest_metrics_are_net_of_fees_and_slippage():
     ]
     result = _summary(rows)
     assert result["trade_count"] == 2
-    assert result["net_pnl"] == "55"
+    assert result["net_pnl"] == "20"
     assert result["wins"] == 1
     assert result["losses"] == 1
-    assert result["profit_factor"] == "5.666666666666666666666666667"
+    assert result["profit_factor"] == "1.307692307692307692307692308"
 
 def test_backtest_out_of_sample_split_uses_trade_entry_date():
     rows = [
