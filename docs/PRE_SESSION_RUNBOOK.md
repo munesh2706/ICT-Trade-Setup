@@ -9,16 +9,16 @@
 
 ## Before each trading session
 
-Run from the repository root:
+Run the single-process session runner from the repository root:
 
 ~~~powershell
 $env:ICT_HISTORY_START_DATE = "2026-01-01"
-python scripts\pre_session_gate.py --calendar data\calendars\nse_2026_through_2026-11-07.json --timeframes 1m 5m 15m 1h
+python scripts\run_nifty50_session.py --calendar data\calendars\nse_2026_through_2026-11-07.json
 ~~~
 
-The first run may require many Angel One historical requests. Later runs compare the full configured date range to the local database and request only missing ranges.
+The runner authenticates once, downloads the current NSE constituent list and Angel One instrument master, performs full historical reconciliation, then starts the WebSocket quote stream and current-session candle refresh. It waits for market open when started pre-market, polls completed 1m candles every minute, 5m candles at 5-minute boundaries and 15m candles at 15-minute boundaries, runs the scanner, and writes JSON reports to data/reports. The first bootstrap may take several minutes because Angel One historical request limits apply. Later sessions request only gaps.
 
-The script:
+The runner:
 - refreshes the official NSE NIFTY 50 constituent list;
 - resolves all 50 symbols against the current Angel One instrument master;
 - checks the complete expected candle grid for every configured stock/timeframe;
@@ -44,22 +44,8 @@ python scripts\pre_session_gate.py --calendar data\calendars\nse_2026_through_20
 Use local_midnight instead only if verified against the provider's actual daily response timestamps. The software intentionally refuses to guess.
 
 
-## During the trading session
+## Manual diagnostics
 
-Refresh completed candles from Angel One Historical API before each scan. Run 1m refresh at the minute cadence, 5m after each completed 5m bar, and 15m after each completed 15m bar:
+The individual `refresh_nifty50_live_session.py` and `scan_nifty50_stocks.py` commands are available for one-shot diagnostics. The normal live workflow is the long-running `run_nifty50_session.py` process above; do not launch a new Python process and re-authenticate for every minute.
 
-~~~powershell
-python scripts\refresh_nifty50_live_session.py --calendar data\calendars\nse_2026_through_2026-11-07.json --timeframes 1m
-python scripts\refresh_nifty50_live_session.py --calendar data\calendars\nse_2026_through_2026-11-07.json --timeframes 5m
-python scripts\refresh_nifty50_live_session.py --calendar data\calendars\nse_2026_through_2026-11-07.json --timeframes 15m
-~~~
-
-The live refresh stores each stock/timeframe independently. A stock is eligible for scanning only when its completed current-session 1m, 5m and 15m grids are present in verified storage. The WebSocket V2 feed is for live quote display/monitoring; it is not used to synthesize OHLCV.
-
-Run the scanner after the relevant refreshes:
-
-~~~powershell
-python scripts\scan_nifty50_stocks.py --calendar data\calendars\nse_2026_through_2026-11-07.json
-~~~
-
-The scanner returns a per-stock readiness state and explainable ICT candidates. A stock with missing current-session candles is skipped rather than scanned on stale data. The current CLI emits JSON; the visual dashboard is a subsequent project milestone.
+A stock is eligible for scanning only when its completed current-session 1m, 5m and 15m grids are present in verified storage. The WebSocket V2 feed is for live quote display/monitoring; it is not used to synthesize OHLCV. The scanner returns per-stock readiness and explainable ICT candidates. The current CLI emits JSON; the visual dashboard remains a subsequent milestone.
