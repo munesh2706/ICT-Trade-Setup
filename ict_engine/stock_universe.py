@@ -209,6 +209,27 @@ def resolve_angelone_equities(snapshot: UniverseSnapshot, instrument_master: lis
         raise UniverseError("Angel One master maps multiple NIFTY 50 symbols to the same token")
     return result
 
+
+def resolve_angelone_cas_eligible_symbols(snapshot: UniverseSnapshot, instrument_master: list[dict[str, Any]]) -> set[str]:
+    """Identify NIFTY 50 cash symbols with stock-futures contracts in Angel One's NFO master.
+
+    NSE CAS Phase 1 applies to cash securities with derivatives contracts.
+    This broker-master check is an operational eligibility cross-check; the
+    exchange calendar supplies the effective date and 15:15 continuous-session
+    boundary. It does not infer eligibility from the cash EQ row.
+    """
+    if not isinstance(instrument_master, list):
+        raise UniverseError("Angel One instrument master is not a list")
+    members = {member.symbol.upper() for member in snapshot.constituents}
+    return {
+        str(row.get("name", "")).strip().upper()
+        for row in instrument_master
+        if isinstance(row, dict)
+        and _normalize_exchange(row.get("exch_seg")) == "NFO"
+        and str(row.get("instrumenttype", "")).strip().upper() == "FUTSTK"
+        and str(row.get("name", "")).strip().upper() in members
+    }
+
 def download_angelone_master(*, timeout: int = 30, session: requests.Session | None = None) -> tuple[list[dict[str, Any]], str]:
     client = session or requests.Session()
     try:
