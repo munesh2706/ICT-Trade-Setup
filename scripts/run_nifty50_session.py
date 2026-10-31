@@ -96,6 +96,8 @@ def main() -> int:
     if args.history_start is None:
         parser.error("provide --history-start or set ICT_HISTORY_START_DATE")
 
+    feed = None
+    stream_started = False
     try:
         now = datetime.now(IST)
         calendar = load_calendar(args.calendar)
@@ -163,6 +165,7 @@ def main() -> int:
             print("Angel One WebSocket V2 connection closed.")
 
         feed.start_stream(on_tick, on_error=on_error, on_open=on_open, on_close=on_close, mode=2)
+        stream_started = True
         scanner = StockICTScanner(StockICTScanConfig(enable_silver_bullet=not args.disable_silver_bullet))
 
         if not args.once and now < session.open_at.astimezone(IST):
@@ -208,6 +211,7 @@ def main() -> int:
             }))
             if args.once:
                 feed.stop_stream()
+                stream_started = False
                 return 0 if scan.ready_stocks == 50 else 2
             next_minute = as_of.replace(second=0, microsecond=0) + timedelta(minutes=1)
             time.sleep(max(0.0, (next_minute - datetime.now(IST)).total_seconds()))
@@ -252,19 +256,22 @@ def main() -> int:
             "report": str(report_path),
         }, indent=2))
         feed.stop_stream()
+        stream_started = False
         return 0 if final_scan.ready_stocks == 50 else 2
     except KeyboardInterrupt:
-        try:
-            feed.stop_stream()
-        except Exception:
-            pass
+        if feed is not None and stream_started:
+            try:
+                feed.stop_stream()
+            except Exception:
+                pass
         return 130
     except Exception as exc:
         print(json.dumps({"status": "FAILED", "error": f"{type(exc).__name__}: {exc}"}, indent=2))
-        try:
-            feed.stop_stream()
-        except Exception:
-            pass
+        if feed is not None and stream_started:
+            try:
+                feed.stop_stream()
+            except Exception:
+                pass
         return 1
 
 if __name__ == "__main__":
