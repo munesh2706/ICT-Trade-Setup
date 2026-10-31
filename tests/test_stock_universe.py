@@ -3,7 +3,8 @@ import pytest
 from decimal import Decimal
 
 from ict_engine.stock_universe import (
-    UniverseError, parse_nse_constituent_csv, resolve_angelone_equities,\n    resolve_angelone_cas_eligible_symbols,
+    UniverseError, parse_nse_constituent_csv, resolve_angelone_equities,
+    resolve_angelone_cas_eligible_symbols,
 )
 
 def make_csv(count=50):
