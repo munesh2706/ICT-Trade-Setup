@@ -1,0 +1,40 @@
+name: NIFTY 50 Stock Platform Tests
+
+on:
+  push:
+    branches:
+      - feature/nifty50-stock-ict-platform
+  pull_request:
+    branches:
+      - main
+      - feature/ict-2022-model-engine
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nifty50-stock-platform-tests
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install project and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest
+      - name: Compile Python modules
+        run: python -m compileall -q ict_engine scripts
+      - name: Run deterministic test suite
+        run: python -m pytest -q

@@ -30,7 +30,7 @@ No live broker orders or automated execution.
 
 Use ICT learning material as the primary methodology reference, including the official ICT mentorship/core content. Concepts and models are to be implemented as taught, not replaced with generic technical-analysis proxies.
 
-The project reference catalogue is in [docs/ICT_FRAMEWORK_REFERENCE.md](docs/ICT_FRAMEWORK_REFERENCE.md). The implementation scope and source hierarchy are in [docs/PROJECT_SCOPE.md](docs/PROJECT_SCOPE.md).
+The project reference catalogue is in [docs/ICT_FRAMEWORK_REFERENCE.md](docs/ICT_FRAMEWORK_REFERENCE.md). The index data contract is documented in [docs/DATA_SOURCE_AND_STORAGE.md](docs/DATA_SOURCE_AND_STORAGE.md). Source-backed model specifications currently cover [ICT 2022 Mentorship Episode 6](docs/ICT_2022_EPISODE6_RULE_SPEC.md) and the [2023 ICT Silver Bullet](docs/ICT_SILVER_BULLET_2023_RULE_SPEC.md). The full architecture and edge-case matrix are in [docs/ENGINE_ARCHITECTURE_AND_SCENARIOS.md](docs/ENGINE_ARCHITECTURE_AND_SCENARIOS.md). The implementation scope and source hierarchy are in [docs/PROJECT_SCOPE.md](docs/PROJECT_SCOPE.md).
 
 ## Engineering principles
 
@@ -46,3 +46,15 @@ The project reference catalogue is in [docs/ICT_FRAMEWORK_REFERENCE.md](docs/ICT
 ## Project boundary
 
 This repository is independent of Nifty50Orderblock. Do not access or modify that project as part of this work.
+
+## Read-only historical data acquisition
+
+After installing `requirements.txt` and configuring the four local Angel One variables in `.env`, historical spot-index candles can be acquired with:
+
+```powershell
+python scripts\fetch_index_history.py --start "2026-10-30 09:15" --end "2026-10-30 15:30" --timeframe 1m --instruments NIFTY BANKNIFTY SENSEX
+```
+
+The end timestamp is exclusive and uses India local time. The script verifies the instrument master, respects interval-specific historical request windows and API pacing, retains raw response batches, and writes an immutable SQLite snapshot. It performs no order operations.
+
+**Important:** successful acquisition creates an `ACQUIRED` snapshot, not a `VERIFIED` dataset. The exchange-calendar coverage audit must pass before the data store will permit backtest reads. Do not treat an acquired snapshot as complete market history.
