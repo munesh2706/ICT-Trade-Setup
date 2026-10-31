@@ -12,6 +12,7 @@ import io
 import json
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Any
 
@@ -81,8 +82,8 @@ def parse_nse_constituent_csv(raw_csv: str, *, captured_on: date | None = None) 
     if len(constituents) != 50 or len(set(symbols)) != 50:
         raise UniverseError(f"expected 50 unique NIFTY 50 constituents, got {len(constituents)}")
     digest = hashlib.sha256(raw_csv.encode("utf-8")).hexdigest()
-    today = captured_on or datetime.now(timezone.utc).date()
-    snapshot_id = f"nifty50_{today.isoformat()}_{digest[:12]}"
+    today = captured_on or datetime.now(ZoneInfo('Asia/Kolkata')).date()
+    snapshot_id = f"nifty50_{digest[:16]}"
     return UniverseSnapshot(
         snapshot_id=snapshot_id,
         captured_at_utc=datetime.now(timezone.utc).isoformat(),
@@ -109,7 +110,7 @@ def download_nse_universe(*, timeout: int = 30, session: requests.Session | None
 def save_universe_snapshot(snapshot: UniverseSnapshot, directory: str | Path) -> Path:
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    path = directory / f"{snapshot.snapshot_id}.json"
+    path = directory / f"{snapshot.as_of_date}_{snapshot.snapshot_id}.json"
     payload = {
         "snapshot_id": snapshot.snapshot_id,
         "captured_at_utc": snapshot.captured_at_utc,
@@ -119,9 +120,11 @@ def save_universe_snapshot(snapshot: UniverseSnapshot, directory: str | Path) ->
         "constituents": [asdict(x) for x in snapshot.constituents],
     }
     encoded = json.dumps(payload, indent=2, sort_keys=True) + "\\n"
-    if path.exists() and path.read_text(encoding="utf-8") != encoded:
-        raise UniverseError(f"immutable universe snapshot conflict: {path}")
-    if not path.exists():
+    if path.exists():
+        existing = json.loads(path.read_text(encoding="utf-8"))
+        if existing.get("source_sha256") != snapshot.source_sha256 or existing.get("constituents") != payload["constituents"]:
+            raise UniverseError(f"immutable universe snapshot conflict: {path}")
+    else:
         path.write_text(encoded, encoding="utf-8")
     return path
 
@@ -141,11 +144,8 @@ def load_universe_snapshot(path: str | Path) -> UniverseSnapshot:
         raise UniverseError(f"invalid universe snapshot: {type(exc).__name__}") from None
     if len(snapshot.constituents) != 50 or len({x.symbol for x in snapshot.constituents}) != 50:
         raise UniverseError("universe snapshot must contain exactly 50 unique symbols")
-    if hashlib.sha256(json.dumps(
-        {"constituents": [asdict(x) for x in snapshot.constituents]},
-        sort_keys=True, separators=(",", ":")
-    ).encode()).hexdigest() == "":
-        raise UniverseError("unreachable checksum validation")
+    if len(snapshot.source_sha256) != 64 or any(ch not in "0123456789abcdef" for ch in snapshot.source_sha256.lower()):
+        raise UniverseError("universe snapshot has an invalid source SHA-256")
     return snapshot
 
 def _normalize_exchange(value: Any) -> str:
