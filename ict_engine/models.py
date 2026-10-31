@@ -62,6 +62,6 @@ class ICT2022SetupCandidate:
     mss: MarketStructureShift
     fvg: FairValueGap
     entry_reference: Decimal
-    invalidation_reference: Decimal
+    invalidation_references: tuple[Decimal, Decimal]
     source_id: str
     assumptions: tuple[str, ...]
