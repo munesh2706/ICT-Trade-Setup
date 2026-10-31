@@ -51,9 +51,9 @@ def main() -> int:
     nfo_stock_futures = set(feed.cas_eligible_symbols)
     symbol = universe.constituents[0].symbol
     cas_eligible = symbol in nfo_stock_futures
-    continuous_close = session.continuous_close_at if cas_eligible and session.continuous_close_at else close_at
     open_at = session.open_at
     close_at = session.close_at
+    continuous_close = session.continuous_close_at if cas_eligible and session.continuous_close_at else close_at
     split_at = open_at.replace(hour=12, minute=15, second=0, microsecond=0)
     if not open_at < split_at < close_at:
         raise SystemExit("diagnostic split boundary is outside this session")
