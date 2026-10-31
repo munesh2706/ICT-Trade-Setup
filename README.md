@@ -1,60 +1,57 @@
 # ICT Trade Setup
 
-**Purpose:** ICT-based index analysis, signal generation, historical backtesting, and paper trading using established concepts and models taught by The Inner Circle Trader (Michael J. Huddleston).
+**Purpose:** a source-backed ICT research, scanning, visual-analysis and paper-trading platform for the 50 individual NSE cash-equity constituents of NIFTY 50.
 
-## Core principle
+## Active scope
 
-This project is **not inventing a new trading setup or a proprietary hybrid strategy**. It will implement and evaluate established ICT concepts and named ICT models using their recognised terminology and rule logic.
+- Exactly the current 50 NIFTY 50 constituent stocks, from a dated NSE membership snapshot.
+- NSE cash-equity (\`SYMBOL-EQ\`) instruments resolved against the Angel One instrument master.
+- Angel One SmartAPI is the only permitted source for historical and live market prices.
+- Index spot instruments, index options and non-constituent stocks are not scan targets.
+- Paper trading and alerts only. No live order placement, modification or cancellation.
 
-Where ICT teachings contain multiple model variants or a rule is not stated consistently across source material, the implementation must document the source/version and preserve the distinction. It must not silently invent a threshold or combine incompatible variants and label the result “standard ICT”.
+## Delivery priorities
 
-## Instruments
+1. **Stock universe and historical data reliability:** versioned constituent snapshots, exact Angel One token resolution, immutable raw response retention, multi-timeframe gap detection, bounded historical backfill and a strict pre-session verification gate.
+2. **ICT scanner:** source-backed ICT concepts and named models, multi-timeframe context, explainable evidence and non-repainting signal lifecycle.
+3. **Paper trading:** deterministic fills, realistic costs/slippage, risk controls, restart-safe journaling and reproducible backtests.
+4. **Visual dashboard:** universe/data health, stock scanner, setup evidence, invalidation, paper positions, performance and audit trail.
 
-- NIFTY 50 index
-- BANKNIFTY index
-- SENSEX index
+## Data integrity rules
 
-Individual stocks and index options are on hold.
+- No fabricated, interpolated, forward-filled or synthetic OHLCV candles.
+- Missing expected timestamps are detected against an explicit NSE session calendar and repaired by downloading the exact historical ranges from Angel One.
+- Data is not released to the strategy until the full requested grid is verified.
+- Holidays, weekends and special sessions must be represented by an explicit calendar with provenance; the system does not assume all weekdays are normal sessions.
+- A provider response that still omits expected bars after bounded retries keeps the pre-session gate closed.
+- Historical constituent membership is point-in-time only when archived official snapshots exist. The current NSE list must not be projected backwards into historical backtests.
 
-## Functional scope
+## First-stage implementation
 
-1. ICT market-context and liquidity analysis.
-2. ICT concept and model recognition.
-3. Signal generation with the exact conditions and invalidation logic of the selected ICT model.
-4. Historical backtesting and performance analysis.
-5. Paper trading and trade journaling.
+See [Stock Universe and Historical Reconciliation](docs/STOCK_UNIVERSE_AND_RECONCILIATION.md).
 
-No live broker orders or automated execution.
+Main modules:
+- \`ict_engine/stock_universe.py\` — official NSE constituent snapshot and strict Angel One cash-equity token resolution.
+- \`ict_engine/stock_feed.py\` — read-only Angel One SmartAPI historical feed for the 50 NSE EQ instruments.
+- \`ict_engine/stock_storage.py\` — immutable SQLite candle snapshots and raw response batches.
+- \`ict_engine/stock_reconciliation.py\` — expected-grid gap detection, Angel One backfill and verification gate.
+- \`scripts/reconcile_nifty50_history.py\` — pre-session reconciliation CLI.
 
-## Methodology
+The required calendar is explicit and source-backed. An illustrative schema (not actual exchange dates) is documented in the stock reconciliation guide. The daily-candle timestamp convention must be explicitly selected when requesting \`1d\`; it is not guessed.
 
-Use ICT learning material as the primary methodology reference, including the official ICT mentorship/core content. Concepts and models are to be implemented as taught, not replaced with generic technical-analysis proxies.
+## ICT methodology
 
-The project reference catalogue is in [docs/ICT_FRAMEWORK_REFERENCE.md](docs/ICT_FRAMEWORK_REFERENCE.md). The index data contract is documented in [docs/DATA_SOURCE_AND_STORAGE.md](docs/DATA_SOURCE_AND_STORAGE.md). Source-backed model specifications currently cover [ICT 2022 Mentorship Episode 6](docs/ICT_2022_EPISODE6_RULE_SPEC.md) and the [2023 ICT Silver Bullet](docs/ICT_SILVER_BULLET_2023_RULE_SPEC.md). The full architecture and edge-case matrix are in [docs/ENGINE_ARCHITECTURE_AND_SCENARIOS.md](docs/ENGINE_ARCHITECTURE_AND_SCENARIOS.md). The implementation scope and source hierarchy are in [docs/PROJECT_SCOPE.md](docs/PROJECT_SCOPE.md).
+ICT learning material remains the methodology source. Source-faithful definitions must be separated from engineering choices. If a lesson contains variants or contradictory guidance, document the source/version and do not silently invent a universal rule. Current model references and detection primitives are being adapted to individual equities after the data layer is complete.
 
-## Engineering principles
+## Engineering constraints
 
-- Separate source-faithful ICT definitions from engineering choices needed to encode them.
-- Record the source, lesson/model, and rule variant for each implemented concept.
 - No look-ahead bias or repainting.
-- Use completed candles wherever the source model requires confirmation.
-- Preserve missing data as missing; do not fabricate candles.
-- Make backtests reproducible and include realistic fees, slippage, and fill assumptions.
-- Report sample size, expectancy, drawdown, trade distribution, and out-of-sample results.
-- A no-trade result is valid; do not force signals.
+- Completed candles for confirmation-based rules.
+- Explicit data provenance, timestamps, source, token and snapshot identity.
+- Backtests only on verified datasets.
+- Report sample size, expectancy, drawdown, fees, slippage and out-of-sample results.
+- No-trade and data-unavailable are valid states; never force a signal.
 
 ## Project boundary
 
-This repository is independent of Nifty50Orderblock. Do not access or modify that project as part of this work.
-
-## Read-only historical data acquisition
-
-After installing `requirements.txt` and configuring the four local Angel One variables in `.env`, historical spot-index candles can be acquired with:
-
-```powershell
-python scripts\fetch_index_history.py --start "2026-10-30 09:15" --end "2026-10-30 15:30" --timeframe 1m --instruments NIFTY BANKNIFTY SENSEX
-```
-
-The end timestamp is exclusive and uses India local time. The script verifies the instrument master, respects interval-specific historical request windows and API pacing, retains raw response batches, and writes an immutable SQLite snapshot. It performs no order operations.
-
-**Important:** successful acquisition creates an `ACQUIRED` snapshot, not a `VERIFIED` dataset. The exchange-calendar coverage audit must pass before the data store will permit backtest reads. Do not treat an acquired snapshot as complete market history.
+This repository is independent of \`Nifty50Orderblock\`. Do not access or modify that separate project as part of this work.
