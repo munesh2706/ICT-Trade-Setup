@@ -134,6 +134,28 @@ def test_paper_entry_eligibility_is_limited_to_selected_direction(tmp_path):
     assert journal.signal_status("signal-outside").value == "entry_armed"
 
 
+def test_selected_stock_cannot_retroactively_fill_before_watchlist_activation(tmp_path):
+    candles, journal, engine = make_engine(tmp_path)
+    sig = signal()
+    engine.process_scan_report(
+        report(sig, datetime(2026,10,30,10,0,tzinfo=IST)),
+        candles=candles, journal=journal,
+    )
+    add_verified_candles(candles, "bars-before-after-selection", [
+        candle(0,100.5,100.7,100.3,100.4),
+        candle(1,101.2,101.5,101.1,101.3),
+    ])
+    scan = report(sig, datetime(2026,10,30,10,2,tzinfo=IST))
+    result = engine.process_scan_report(
+        scan, candles=candles, journal=journal,
+        eligible_symbols={"ABC"}, eligible_directions={"ABC":"bullish"},
+        eligible_since={"ABC": datetime(2026,10,30,10,1,tzinfo=IST)},
+    )
+    assert result.positions_opened == 0
+    assert result.open_positions == 0
+    assert result.pending_signals == 1
+
+
 def test_global_single_position_cap_blocks_second_simultaneous_fill(tmp_path):
     candles, journal, engine = make_engine(tmp_path)
     first = signal()

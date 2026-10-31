@@ -227,11 +227,13 @@ class StockPaperTradingEngine:
             return "no_trade"
 
         first_seen = journal.signal_created_at(signal.signal_id)
-        scan_start = max(first_seen, signal.available_at, not_before) if not_before is not None else max(first_seen, signal.available_at)
-        if report.as_of - scan_start > timedelta(minutes=self.config.max_entry_wait_minutes):
+        signal_start = max(first_seen, signal.available_at)
+        if report.as_of - signal_start > timedelta(minutes=self.config.max_entry_wait_minutes):
             self._event(journal, signal, SignalStatus.MISSED, report,
                         "FVG limit entry expired without a verified fill", "missed-entry-expired")
             return "rejected"
+        # Watchlist activation and prior-trade exit boundaries prevent retroactive fills.
+        scan_start = max(signal_start, not_before) if not_before is not None else signal_start
 
         bars = candles.load_verified_candles(signal.symbol, "1m", start=scan_start, end=report.as_of)
         for bar in bars:
