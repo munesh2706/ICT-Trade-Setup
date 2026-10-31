@@ -76,3 +76,19 @@ def test_directional_target_candidates_keep_all_valid_levels_nearest_first():
     bearish = directional_target_candidates("bearish", D("100"), levels)
     assert [x.name for x in bullish] == ["PDH", "PWH"]
     assert [x.name for x in bearish] == ["PDL"]
+
+def test_market_context_combines_day_week_and_equal_liquidity_without_bias():
+    from ict_engine.context import LiquidityPool, build_market_context
+    day = [candle(0, 110, 90)]
+    week = [candle(1, 120, 80)]
+    pools = [
+        LiquidityPool("buy_side", D("115"), (D("114.9"), D("115.1")), "relative_equal_highs_lows", D("0.2")),
+        LiquidityPool("sell_side", D("85"), (D("84.9"), D("85.1")), "relative_equal_highs_lows", D("0.2")),
+    ]
+    context = build_market_context(
+        current_price=D("100"), dealing_range_high=D("120"), dealing_range_low=D("80"),
+        previous_day_candles=day, previous_week_candles=week, relative_equal_pools=pools,
+    )
+    assert context.price_location == "equilibrium"
+    assert [x.price for x in context.draws_above] == [D("110"), D("115"), D("120")]
+    assert [x.price for x in context.draws_below] == [D("90"), D("85")]
