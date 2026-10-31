@@ -9,7 +9,7 @@ def make_csv(count=50):
     rows = ["Company Name,Industry,Symbol,Series,ISIN Code"]
     for i in range(count):
         rows.append(f"Company {i},Industry,SYM{i:02d},EQ,INE00000000{i:02d}")
-    return "\\n".join(rows)
+    return "\n".join(rows)
 
 def test_constituent_csv_requires_exactly_50_unique_members():
     snapshot = parse_nse_constituent_csv(make_csv(), captured_on=date(2026, 10, 31))
