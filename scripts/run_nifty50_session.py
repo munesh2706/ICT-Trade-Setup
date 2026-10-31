@@ -78,13 +78,16 @@ def _merge_quote_sources(latest_ticks, quote_batch):
     for symbol, tick in (latest_ticks or {}).items():
         record = _quote_record(tick, source="Angel One WebSocket V2")
         current = selected.get(symbol)
-        if current is None or (current["stale"] and not record["stale"]):
+        if current is None:
             selected[symbol] = record
-        elif current["stale"] and record["stale"]:
-            if record["age_seconds"] is not None and (
-                current["age_seconds"] is None or record["age_seconds"] < current["age_seconds"]
-            ):
-                selected[symbol] = record
+            continue
+        if current["stale"] and not record["stale"]:
+            selected[symbol] = record
+            continue
+        if current["stale"] == record["stale"] and record["age_seconds"] is not None and (
+            current["age_seconds"] is None or record["age_seconds"] < current["age_seconds"]
+        ):
+            selected[symbol] = record
     return selected
 
 def write_report(report, directory: Path, *, tick_count: int, stream_errors: list[str], latest_ticks=None, quote_batch=None, paper_report=None, expired_signals: int = 0):
