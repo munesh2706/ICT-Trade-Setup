@@ -129,3 +129,20 @@ def fvg_pd_array(gap: FairValueGap) -> PDArrayReference:
         "FVG", gap.direction, gap.lower, gap.upper, ce,
         (gap.first_candle_index, gap.middle_candle_index, gap.third_candle_index),
     )
+
+
+def directional_target_candidates(
+    direction: str, entry_reference: Decimal, liquidity_levels: Sequence[LiquidityLevel]
+) -> tuple[LiquidityLevel, ...]:
+    """Return all source-backed liquidity levels beyond entry, nearest first.
+
+    This enumerates possible objectives; it deliberately does not choose a
+    single target or decide internal-vs-external liquidity priority.
+    """
+    if direction == "bullish":
+        candidates = [x for x in liquidity_levels if x.side == "buy_side" and x.price > entry_reference]
+        return tuple(sorted(candidates, key=lambda x: x.price))
+    if direction == "bearish":
+        candidates = [x for x in liquidity_levels if x.side == "sell_side" and x.price < entry_reference]
+        return tuple(sorted(candidates, key=lambda x: x.price, reverse=True))
+    raise ValueError("direction must be bullish or bearish")
