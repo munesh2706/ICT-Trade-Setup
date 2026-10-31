@@ -122,6 +122,7 @@ def main() -> int:
         ]
         if not completed_sessions:
             raise ValueError("no completed session exists in the configured historical warm-up range")
+        startup_expired = paper_engine.expire_pending_signals(paper_journal, completed_sessions[-1].close_at)
         historical_dates = [x.trading_date for x in completed_sessions]
         historical = reconcile_universe(
             universe=universe, feed=feed, store=store, calendar=calendar,
