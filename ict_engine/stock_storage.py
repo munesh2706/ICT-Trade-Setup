@@ -163,6 +163,26 @@ class StockCandleStore:
             db.execute("""UPDATE stock_snapshots SET status='VERIFIED'
                 WHERE universe_snapshot_id=? AND status='ACQUIRED'""", (universe_snapshot_id,))
 
+
+    def mark_series_snapshots_verified(self, universe_snapshot_id: str, symbol: str, timeframe: str):
+        """Verify staged snapshots containing only one audited stock/timeframe.
+
+        Used by the intraday incremental refresh path. Multi-series pre-market
+        snapshots are verified only by the all-universe reconciliation gate.
+        """
+        with self._db() as db:
+            rows = db.execute("""SELECT s.snapshot_id
+                FROM stock_snapshots s
+                WHERE s.universe_snapshot_id=? AND s.status='ACQUIRED'
+                AND EXISTS (SELECT 1 FROM stock_candles c WHERE c.snapshot_id=s.snapshot_id)
+                AND NOT EXISTS (
+                    SELECT 1 FROM stock_candles c
+                    WHERE c.snapshot_id=s.snapshot_id
+                    AND (c.symbol<>? OR c.timeframe<>?)
+                )""", (universe_snapshot_id, symbol, timeframe)).fetchall()
+            for (snapshot_id,) in rows:
+                db.execute("UPDATE stock_snapshots SET status='VERIFIED' WHERE snapshot_id=?", (snapshot_id,))
+
     def pending_snapshots(self, universe_snapshot_id: str) -> list[str]:
         with self._db() as db:
             rows = db.execute("""SELECT snapshot_id FROM stock_snapshots
