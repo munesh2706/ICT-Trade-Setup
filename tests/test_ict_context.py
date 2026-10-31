@@ -5,7 +5,7 @@ import pytest
 
 from ict_engine.context import (
     classify_premium_discount, dealing_range, equal_high_low_pools,
-    fvg_pd_array, previous_period_levels, directional_target_candidates,
+    fvg_pd_array, previous_period_levels, directional_target_candidates, LiquidityLevel,
 )
 from ict_engine.ict_2022_episode6 import fair_value_gaps
 from ict_engine.models import Candle
@@ -68,9 +68,9 @@ def test_equal_high_pool_does_not_chain_beyond_total_tolerance():
 
 def test_directional_target_candidates_keep_all_valid_levels_nearest_first():
     levels = [
-        __import__("ict_engine.context", fromlist=["LiquidityLevel"]).LiquidityLevel("PDH", D("110"), "buy_side", "previous_day_high"),
-        __import__("ict_engine.context", fromlist=["LiquidityLevel"]).LiquidityLevel("PWH", D("120"), "buy_side", "previous_week_high"),
-        __import__("ict_engine.context", fromlist=["LiquidityLevel"]).LiquidityLevel("PDL", D("90"), "sell_side", "previous_day_low"),
+        LiquidityLevel("PDH", D("110"), "buy_side", "previous_day_high"),
+        LiquidityLevel("PWH", D("120"), "buy_side", "previous_week_high"),
+        LiquidityLevel("PDL", D("90"), "sell_side", "previous_day_low"),
     ]
     bullish = directional_target_candidates("bullish", D("100"), levels)
     bearish = directional_target_candidates("bearish", D("100"), levels)
