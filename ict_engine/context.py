@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from datetime import datetime
 from typing import Sequence
 
 from .models import Candle, FairValueGap
@@ -22,7 +23,7 @@ class LiquidityLevel:
     price: Decimal
     side: str  # buy_side or sell_side
     source: str
-    reference_time: object | None = None
+    reference_time: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -109,7 +110,7 @@ def equal_high_low_pools(
     ):
         clusters: list[list[Decimal]] = []
         for value in sorted(values):
-            if not clusters or value - clusters[-1][-1] > tolerance:
+            if not clusters or value - clusters[-1][0] > tolerance:
                 clusters.append([value])
             else:
                 clusters[-1].append(value)
