@@ -63,13 +63,23 @@ def _summary(rows):
     ) for row in rows]
     return encode(summarize_trades(trades))
 
-def _by_entry_date(rows, cutoff: date, in_sample: bool):
-    selected = []
+def _split_trades(rows, cutoff: date):
+    """Split by entry date and exclude trades crossing the OOS boundary.
+
+    A pre-cutoff position that exits on/after the cutoff contains post-cutoff
+    outcome information and must not contaminate the in-sample metrics.
+    """
+    in_sample, out_of_sample, boundary_crossing = [], [], []
     for row in rows:
         entry_date = datetime.fromisoformat(row["entry_time"]).astimezone(IST).date()
-        if (entry_date < cutoff) == in_sample:
-            selected.append(row)
-    return selected
+        exit_date = datetime.fromisoformat(row["exit_time"]).astimezone(IST).date()
+        if entry_date < cutoff <= exit_date:
+            boundary_crossing.append(row)
+        elif entry_date < cutoff:
+            in_sample.append(row)
+        else:
+            out_of_sample.append(row)
+    return in_sample, out_of_sample, boundary_crossing
 
 def run_backtest(args) -> dict:
     if not args.source_db.is_file():
@@ -176,6 +186,7 @@ def run_backtest(args) -> dict:
             "max_entry_wait_minutes": paper_config.max_entry_wait_minutes,
         },
         "performance": metrics,
+        "out_of_sample_boundary_crossing_trades_excluded": len(boundary_crossing_trades),
         "open_positions_at_end": len(open_positions),
         "open_positions": [{
             "symbol": p.instrument_id, "direction": p.direction,
