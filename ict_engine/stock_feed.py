@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import os
 import time
+import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from zoneinfo import ZoneInfo
+from uuid import uuid4
 
 from dotenv import load_dotenv
 
@@ -41,6 +43,17 @@ class StockQuote:
     stale: bool
 
 @dataclass(frozen=True, slots=True)
+class StockTick:
+    symbol: str
+    token: str
+    ltp: Decimal
+    exchange_timestamp: datetime
+    received_at: datetime
+    subscription_mode: int
+    sequence_number: int | None
+    cumulative_day_volume: int | None
+
+@dataclass(frozen=True, slots=True)
 class QuoteBatch:
     quotes: tuple[StockQuote, ...]
     missing_symbols: tuple[str, ...]
@@ -54,7 +67,7 @@ class QuoteBatch:
         return not self.missing_symbols and not self.stale_symbols and not self.unfetched_tokens and not self.errors
 
 class AngelOneStockFeed:
-    def __init__(self, client, instruments: dict[str, StockInstrument], *, pace_seconds: float = 1.0, master_sha256: str = ""):
+    def __init__(self, client, instruments: dict[str, StockInstrument], *, pace_seconds: float = 1.0, master_sha256: str = "", auth_token: str | None = None, feed_token: str | None = None, api_key: str | None = None, client_code: str | None = None):
         if pace_seconds < (1 / 3):
             raise ValueError("pace_seconds must be at least 1/3 second (Angel One historical API limit)")
         if len(instruments) != 50:
@@ -63,6 +76,12 @@ class AngelOneStockFeed:
         self.instruments = dict(instruments)
         self.pace_seconds = pace_seconds
         self.master_sha256 = master_sha256
+        self._auth_token = auth_token
+        self._feed_token = feed_token
+        self._api_key = api_key
+        self._client_code = client_code
+        self._websocket = None
+        self._websocket_thread: threading.Thread | None = None
         self._last_request_at = 0.0
         self._last_quote_request_at = 0.0
         self.raw_responses: list[dict] = []
@@ -86,12 +105,21 @@ class AngelOneStockFeed:
             raise StockFeedError("Angel One authentication failed; check local SDK, network and device clock") from None
         if not isinstance(login, dict) or login.get("status") is not True:
             raise StockFeedError("Angel One rejected authentication; check credentials, PIN and TOTP clock")
+        login_data = login.get("data") or {}
+        auth_token = login_data.get("jwtToken") or getattr(client, "jwtToken", None)
+        feed_token = login_data.get("feedToken") or getattr(client, "feedToken", None)
+        if not auth_token or not feed_token:
+            raise StockFeedError("Angel One login did not return the required WebSocket authentication tokens")
         try:
             master, digest = download_angelone_master()
             instruments = resolve_angelone_equities(universe, master)
         except UniverseError as exc:
             raise StockFeedError(str(exc)) from None
-        return cls(client, instruments, pace_seconds=pace_seconds, master_sha256=digest)
+        return cls(
+            client, instruments, pace_seconds=pace_seconds, master_sha256=digest,
+            auth_token=auth_token, feed_token=feed_token,
+            api_key=os.environ["ANGEL_API_KEY"], client_code=os.environ["ANGEL_CLIENT_CODE"],
+        )
 
     def fetch_candles(self, symbol: str, timeframe: str, start: datetime, end: datetime) -> list[Candle]:
         if symbol not in self.instruments:
@@ -243,6 +271,110 @@ class AngelOneStockFeed:
             tuple(errors),
             received_at,
         )
+
+    @staticmethod
+    def normalize_stream_tick(message: dict, token_to_symbol: dict[str, str], received_at: datetime | None = None) -> StockTick:
+        if not isinstance(message, dict):
+            raise StockFeedError("WebSocket tick must be a decoded dictionary")
+        token = str(message.get("token", "")).strip()
+        symbol = token_to_symbol.get(token)
+        if symbol is None:
+            raise StockFeedError(f"WebSocket returned an unknown NSE token: {token or '<blank>'}")
+        if int(message.get("exchange_type", 1)) != 1:
+            raise StockFeedError(f"WebSocket exchange type mismatch for {symbol}")
+        try:
+            raw_ltp = Decimal(str(message["last_traded_price"]))
+            ltp = raw_ltp / Decimal("100")
+            epoch_ms = int(message["exchange_timestamp"])
+            if not ltp.is_finite() or ltp <= 0 or epoch_ms <= 0:
+                raise ValueError("invalid LTP or exchange timestamp")
+            stamp = datetime.fromtimestamp(epoch_ms / 1000, timezone.utc).astimezone(IST)
+            mode = int(message.get("subscription_mode", 1))
+            sequence = int(message["sequence_number"]) if message.get("sequence_number") is not None else None
+            volume = int(message["volume_trade_for_the_day"]) if message.get("volume_trade_for_the_day") is not None else None
+        except (KeyError, ValueError, TypeError, InvalidOperation, OverflowError):
+            raise StockFeedError(f"malformed Angel One WebSocket tick for {symbol}") from None
+        return StockTick(symbol, token, ltp, stamp, received_at or datetime.now(IST), mode, sequence, volume)
+
+    def start_stream(self, on_tick, *, on_error=None, on_open=None, on_close=None, mode: int = 2):
+        """Start one SmartAPI WebSocket V2 connection for all 50 NSE EQ tokens.
+
+        Mode 2 (Quote) supplies LTP and cumulative day volume. Stream ticks are
+        for live display/monitoring; completed OHLCV candles remain sourced from
+        Angel One Historical API and are never synthesized from sparse ticks.
+        """
+        if mode not in {1, 2, 3}:
+            raise ValueError("WebSocket mode must be 1 (LTP), 2 (Quote) or 3 (Snap Quote)")
+        if not all((self._auth_token, self._feed_token, self._api_key, self._client_code)):
+            raise StockFeedError("WebSocket credentials are unavailable; authenticate through connect_from_env first")
+        if self._websocket_thread and self._websocket_thread.is_alive():
+            raise StockFeedError("Angel One WebSocket is already running")
+        try:
+            from SmartApi.smartWebSocketV2 import SmartWebSocketV2
+            ws = SmartWebSocketV2(
+                self._auth_token, self._api_key, self._client_code, self._feed_token,
+                max_retry_attempt=5, retry_strategy=1, retry_delay=2,
+                retry_multiplier=2, retry_duration=2,
+            )
+        except Exception:
+            raise StockFeedError("SmartAPI WebSocket V2 could not be initialized") from None
+        token_to_symbol = {item.token: symbol for symbol, item in self.instruments.items()}
+        token_list = [{"exchangeType": 1, "tokens": list(token_to_symbol)}]
+        correlation_id = uuid4().hex[:10]
+
+        def handle_open(wsapp):
+            try:
+                ws.subscribe(correlation_id, mode, token_list)
+                if on_open:
+                    on_open()
+            except Exception as exc:
+                if on_error:
+                    on_error(f"subscription failed: {type(exc).__name__}")
+
+        def handle_data(wsapp, message):
+            try:
+                tick = self.normalize_stream_tick(message, token_to_symbol)
+                on_tick(tick)
+            except Exception as exc:
+                if on_error:
+                    on_error(str(exc))
+
+        def handle_error(*args):
+            if on_error:
+                on_error(" ".join(str(x) for x in args if x is not None))
+
+        def handle_close(wsapp):
+            if on_close:
+                on_close()
+
+        ws.on_open = handle_open
+        ws.on_data = handle_data
+        ws.on_error = handle_error
+        ws.on_close = handle_close
+        self._websocket = ws
+
+        def run():
+            try:
+                ws.connect()
+            except Exception as exc:
+                if on_error:
+                    on_error(f"WebSocket connection terminated: {type(exc).__name__}")
+
+        self._websocket_thread = threading.Thread(target=run, name="angelone-nifty50-stream", daemon=True)
+        self._websocket_thread.start()
+        return ws
+
+    def stop_stream(self, *, join_timeout: float = 5.0):
+        ws = self._websocket
+        if ws is not None:
+            try:
+                ws.close_connection()
+            finally:
+                self._websocket = None
+        thread = self._websocket_thread
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=join_timeout)
+        self._websocket_thread = None
 
     def fetch_range(self, symbol: str, timeframe: str, start: datetime, end: datetime) -> list[Candle]:
         """Fetch a range in non-overlapping provider-sized chunks."""
