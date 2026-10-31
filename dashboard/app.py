@@ -133,7 +133,7 @@ def api_candles(symbol: str, timeframe: str = Query("5m"),
         raise HTTPException(400, "Invalid stock symbol")
     if timeframe not in ALLOWED_TIMEFRAMES:
         raise HTTPException(400, "Unsupported timeframe")
-    candles = candle_store().load_verified_candles(symbol, timeframe)[-limit:]
+    candles = candle_store().load_verified_candles(symbol, timeframe, limit=limit)
     return {"symbol": symbol, "timeframe": timeframe, "count": len(candles), "candles": [{
         "timestamp": c.timestamp.isoformat(), "open": str(c.open), "high": str(c.high),
         "low": str(c.low), "close": str(c.close), "volume": str(c.volume),
