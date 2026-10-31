@@ -100,3 +100,20 @@ Request pacing defaults to one request per second and refuses a rate faster than
 - The NSE CSV represents current membership at capture time. It is not a historical point-in-time constituent archive. Backtests over past dates require archived official constituent snapshots and effective-date evidence.
 - Angel One may not return all requested bars. The system retries a bounded number of times and then blocks the gate if any expected timestamp remains absent.
 - This module is the first delivery layer. ICT scanning, paper trading, and dashboard integration follow only after the data gate is proven on authenticated local Angel One data.
+
+
+## NSE Closing Auction Session (CAS) and candle-grid boundaries
+
+NSE CAS Phase 1 applies to cash-market securities on which derivative contracts are available. For CAS-eligible stocks, continuous trading transitions to the separate CAS at **15:15 IST**; CAS runs from **15:15 to 15:35 IST**. Non-CAS cash securities retain continuous trading until 15:30 IST. See the [NSE CAS specification](https://www.nseindia.com/static/products-services/closing-auction-session) and NSE circulars **NSE/CMTR/72394** and **NSE/CMTR/74466**. The CAS historical-data archive begins on 03-Aug-2026, the effective date recorded in the session calendar.
+
+The exchange calendar therefore keeps the normal \`close_at\` and a separately sourced \`continuous_close_at\`. For each symbol, the Angel One instrument master is checked for an NFO \`FUTSTK\` row; only those symbols use the CAS continuous cutoff. This is not inferred from the NSE EQ cash row. The current NIFTY 50 snapshot was checked against the authenticated master and all 50 members had NFO stock-futures entries.
+
+For a normal 09:15 session with a 15:15 continuous close, the expected completed-candle grid is:
+
+- 1-minute: 360 bars (09:15 through 15:14)
+- 5-minute: 72 bars (09:15 through 15:10)
+- 15-minute: 24 bars (09:15 through 15:00)
+
+The auction-period values returned by a provider are not appended to the continuous-trading ICT candle series. For example, a 1-minute timestamp around 15:28, a 5-minute timestamp around 15:25, or a 15-minute timestamp at 15:15 is outside the continuous-session grid. Those records must not be counted as missing continuous candles or used for ICT detection, paper entries, or exits.
+
+The eligibility set is resolved from the current instrument-master snapshot and passed through historical reconciliation, live refresh, scanning, paper execution, and replay. If a security is not CAS-eligible, its expected grid continues to use the normal 15:30 close. The calendar coverage ends 07-Nov-2026; later exchange schedule changes require an explicit calendar update rather than extrapolation.
