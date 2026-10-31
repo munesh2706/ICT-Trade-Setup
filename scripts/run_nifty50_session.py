@@ -12,7 +12,7 @@ import os
 import sys
 import threading
 import time
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, is_dataclass, replace
 from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import Enum
@@ -107,10 +107,10 @@ def main() -> int:
         if args.history_start < calendar.coverage_start:
             raise ValueError("history start is outside NSE calendar coverage")
 
+        paper_config = load_paper_trading_config(args.paper_config)
         universe = download_nse_universe()
         universe_path = save_universe_snapshot(universe, args.universe_dir)
         feed = AngelOneStockFeed.connect_from_env(universe, pace_seconds=args.pace_seconds)
-        paper_config = load_paper_trading_config(args.paper_config)
         paper_engine = StockPaperTradingEngine(paper_config, feed.instruments)
         args.database.parent.mkdir(parents=True, exist_ok=True)
         store = StockCandleStore(args.database)
@@ -233,6 +233,7 @@ def main() -> int:
         final_expired = 0
         if final_session is not None and final_as_of >= final_session.close_at:
             final_expired = paper_engine.expire_pending_signals(paper_journal, final_session.close_at)
+            final_paper = replace(final_paper, pending_signals=len(paper_journal.pending_signals()))
         with lock:
             count = tick_count
             errors = list(stream_errors)
