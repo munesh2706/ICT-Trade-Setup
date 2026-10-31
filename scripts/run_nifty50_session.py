@@ -160,11 +160,12 @@ def main() -> int:
 
         completed_sessions = [
             x for x in calendar.sessions_between(args.history_start, now.date())
-            if x.close_at.astimezone(IST) < now
+            if (x.continuous_close_at or x.close_at).astimezone(IST) < now
         ]
         if not completed_sessions:
             raise ValueError("no completed session exists in the configured historical warm-up range")
-        startup_expired = paper_engine.expire_pending_signals(paper_journal, completed_sessions[-1].close_at)
+        startup_close = completed_sessions[-1].continuous_close_at or completed_sessions[-1].close_at
+        startup_expired = paper_engine.expire_pending_signals(paper_journal, startup_close)
         historical_dates = [x.trading_date for x in completed_sessions]
         historical = reconcile_universe(
             universe=universe, feed=feed, store=store, calendar=calendar,
@@ -215,7 +216,8 @@ def main() -> int:
 
         while True:
             as_of = datetime.now(IST)
-            if as_of >= session.close_at.astimezone(IST):
+            strategy_close = session.continuous_close_at or session.close_at
+            if as_of >= strategy_close.astimezone(IST):
                 break
             elapsed = int((as_of - session.open_at.astimezone(IST)).total_seconds() // 60)
             timeframes = ["1m"]
@@ -230,8 +232,12 @@ def main() -> int:
             scan = scanner.scan_universe(
                 universe=universe, store=store, calendar=calendar,
                 scan_date=as_of.date(), as_of=as_of,
+                cas_eligible_symbols=feed.cas_eligible_symbols,
             )
-            paper = paper_engine.process_scan_report(scan, candles=store, journal=paper_journal)
+            paper = paper_engine.process_scan_report(
+                scan, candles=store, journal=paper_journal, calendar=calendar,
+                cas_eligible_symbols=feed.cas_eligible_symbols,
+            )
             with lock:
                 count = tick_count
                 errors = list(stream_errors)
@@ -269,7 +275,7 @@ def main() -> int:
             time.sleep(max(0.0, (next_minute - datetime.now(IST)).total_seconds()))
 
         # Bounded post-close reconciliation for final completed session bars.
-        final_as_of = session.close_at.astimezone(IST)
+        final_as_of = (session.continuous_close_at or session.close_at).astimezone(IST)
         final_refresh = None
         for attempt in range(3):
             final_refresh = refresh_current_session(
@@ -283,12 +289,18 @@ def main() -> int:
         final_scan = scanner.scan_universe(
             universe=universe, store=store, calendar=calendar,
             scan_date=final_as_of.date(), as_of=final_as_of,
+            cas_eligible_symbols=feed.cas_eligible_symbols,
         )
-        final_paper = paper_engine.process_scan_report(final_scan, candles=store, journal=paper_journal)
+        final_paper = paper_engine.process_scan_report(
+            final_scan, candles=store, journal=paper_journal, calendar=calendar,
+            cas_eligible_symbols=feed.cas_eligible_symbols,
+        )
         final_session = calendar.session_for(final_as_of.date())
         final_expired = 0
-        if final_session is not None and final_as_of >= final_session.close_at:
-            final_expired = paper_engine.expire_pending_signals(paper_journal, final_session.close_at)
+        if final_session is not None:
+            final_close = final_session.continuous_close_at or final_session.close_at
+            if final_as_of >= final_close:
+                final_expired = paper_engine.expire_pending_signals(paper_journal, final_close)
             final_paper = replace(final_paper, pending_signals=len(paper_journal.pending_signals()))
         with lock:
             count = tick_count
