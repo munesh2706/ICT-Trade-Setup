@@ -70,9 +70,15 @@ Example structure (illustrative schema only; not market calendar data):
 
 The example deliberately contains placeholders, not invented dates or sessions.
 
+## Live market data
+
+`AngelOneStockFeed.start_stream()` starts one SmartAPI WebSocket V2 connection and subscribes all 50 NSE cash tokens in Quote mode by default. The callback normalizes Angel One's paise-scaled LTP to rupees, retains exchange timestamps, sequence number and cumulative day volume, and rejects unknown tokens or exchange types. The SDK reconnect policy is bounded. `stop_stream()` closes the connection.
+
+**Stream ticks are not promoted to completed candles.** Sparse or interrupted tick updates cannot prove full minute OHLCV. The live stream is for current quote display and intraday monitoring; completed bars used by ICT detectors must still come from Angel One Historical API and pass the same expected-grid verification. A stream disconnect therefore does not create synthetic candles; the historical reconciliation path repairs missing completed bars.
+
 ## Live quote snapshots
 
-`AngelOneStockFeed.fetch_full_quotes()` requests FULL market data for all 50 resolved NSE tokens in one SmartAPI market-data call. It validates token identity, duplicate/missing/unfetched rows, positive LTP and exchange feed timestamp. A quote without an exchange timestamp is treated as stale/unknown, not fresh. The default 90-second age threshold is an engineering setting and should be calibrated with live-session observations. A FULL quote is a point-in-time snapshot, not a replacement for candle history or a continuous WebSocket stream.
+`AngelOneStockFeed.fetch_full_quotes()` requests FULL market data for all 50 resolved NSE tokens in one SmartAPI market-data call. It validates token identity, duplicate/missing/unfetched rows, positive LTP and exchange feed timestamp. A quote without an exchange timestamp is treated as stale/unknown, not fresh. The default 90-second age threshold is an engineering setting and should be calibrated with live-session observations. A FULL quote is a point-in-time snapshot, not a replacement for candle history. The WebSocket V2 adapter is the continuous live display/monitoring path.
 
 Angel One documents a maximum of 50 symbols in one market-data request, a one-request-per-second limit, and FULL quote fields including LTP and exchange feed time. See [SmartAPI documentation](https://smartapi.angelone.in/docs).
 
