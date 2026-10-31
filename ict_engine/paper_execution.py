@@ -75,8 +75,10 @@ def resolve_barrier_exit(
     """
     if direction not in {"long", "short"}:
         raise ValueError("direction must be long or short")
-    if stop == target:
-        raise ValueError("stop and target cannot be equal")
+    if direction == "long" and stop >= target:
+        raise ValueError("long trade requires stop below target")
+    if direction == "short" and stop <= target:
+        raise ValueError("short trade requires stop above target")
     if direction == "long":
         stop_hit = candle.low <= stop
         target_hit = candle.high >= target
