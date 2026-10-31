@@ -96,3 +96,13 @@ def test_scanner_blocks_stock_with_missing_current_session_candle():
     assert status.status == "DATA_NOT_READY"
     assert "1m=1" in status.reason
     assert report.ready_stocks == 49
+
+
+def test_scanner_has_bounded_15m_context_history():
+    config = StockICTScanConfig()
+    assert config.max_15m_context_bars == 300
+
+def test_scanner_rejects_non_positive_15m_context_history():
+    import pytest
+    with pytest.raises(ValueError, match="bar limits must be positive"):
+        StockICTScanConfig(max_15m_context_bars=0)
