@@ -186,8 +186,8 @@ def _liquidity_context(
     return tuple(levels), context
 
 def _signal_id(symbol: str, model: str, direction: str, available_at: datetime,
-               lower: Decimal, upper: Decimal) -> str:
-    raw = "|".join((symbol, model, direction, available_at.isoformat(), str(lower), str(upper)))
+               lower: Decimal, upper: Decimal, evidence_key: str = "") -> str:
+    raw = "|".join((symbol, model, direction, available_at.isoformat(), str(lower), str(upper), evidence_key))
     return sha256(raw.encode("utf-8")).hexdigest()[:24]
 
 def _episode6_signal(
@@ -237,7 +237,8 @@ def _episode6_signal(
             sweep_extreme = sweep.extreme
         targets = directional_target_candidates(candidate.direction, candidate.entry_reference, levels)
         result.append(StockSignal(
-            _signal_id(symbol, candidate.model, candidate.direction, available_at, lower, upper),
+            _signal_id(symbol, candidate.model, candidate.direction, available_at, lower, upper,
+                       f"{sweep_name}:{sweep_price}"),
             symbol, company_name, candidate.model, candidate.direction,
             "ENTRY_ARMED" if retest else "QUALIFIED_WAITING_FOR_FVG_RETRACE",
             available_at, lower, upper, candidate.entry_reference,
@@ -314,7 +315,8 @@ def _silver_bullet_signals(
             gap = candidate.fvg
             available_at = retest_time
             result.append(StockSignal(
-                _signal_id(symbol, candidate.model, direction, available_at, gap.lower, gap.upper),
+                _signal_id(symbol, candidate.model, direction, available_at, gap.lower, gap.upper,
+                           f"{candidate.draw_on_liquidity.name}:{candidate.draw_on_liquidity.price}"),
                 symbol, company_name, candidate.model, direction, "ENTRY_ARMED",
                 available_at, gap.lower, gap.upper, None, (),
                 None, None, None, None, None, None,
