@@ -164,22 +164,24 @@ def _liquidity_context(
     if prior_day and prior_week:
         week_high = max(c.high for c in prior_week)
         week_low = min(c.low for c in prior_week)
-        context_obj = build_market_context(
-            current_price=current_price,
-            dealing_range_high=week_high,
-            dealing_range_low=week_low,
-            previous_day_candles=prior_day,
-            previous_week_candles=prior_week,
-        )
+        context_obj = None
+        if week_high > week_low:
+            context_obj = build_market_context(
+                current_price=current_price,
+                dealing_range_high=week_high,
+                dealing_range_low=week_low,
+                previous_day_candles=prior_day,
+                previous_week_candles=prior_week,
+            )
         context = {
-            "price_location_in_previous_week_range": context_obj.price_location,
+            "price_location_in_previous_week_range": context_obj.price_location if context_obj else "unavailable_dealing_range",
             "previous_week_high": week_high,
             "previous_week_low": week_low,
-            "previous_week_equilibrium": context_obj.dealing_range.equilibrium,
+            "previous_week_equilibrium": context_obj.dealing_range.equilibrium if context_obj else None,
             "previous_day_high": max(c.high for c in prior_day),
             "previous_day_low": min(c.low for c in prior_day),
-            "draws_above": tuple(context_obj.draws_above),
-            "draws_below": tuple(context_obj.draws_below),
+            "draws_above": tuple(context_obj.draws_above) if context_obj else (),
+            "draws_below": tuple(context_obj.draws_below) if context_obj else (),
         }
     return tuple(levels), context
 
@@ -265,6 +267,7 @@ def _silver_bullet_signals(
     scan_date: date,
     as_of: datetime,
     session,
+    current_price: Decimal,
 ) -> list[StockSignal]:
     if not candles_1m or not levels:
         return []
@@ -276,7 +279,12 @@ def _silver_bullet_signals(
         if window.end <= session.open_at or window.start >= session.close_at:
             continue
         for direction, side in (("bullish", "buy_side"), ("bearish", "sell_side")):
-            targets = [x for x in levels if x.side == side]
+            targets = [
+                x for x in levels
+                if x.side == side and (
+                    x.price > current_price if direction == "bullish" else x.price < current_price
+                )
+            ]
             if direction == "bullish":
                 targets.sort(key=lambda x: x.price)
             else:
@@ -314,7 +322,13 @@ def _silver_bullet_signals(
                 candles_1m[gap.middle_candle_index].timestamp,
                 candles_1m[gap.third_candle_index].timestamp,
                 retest_time,
-                (candidate.draw_on_liquidity,), context or {},
+                (candidate.draw_on_liquidity,),
+                {
+                    **(context or {}),
+                    "silver_bullet_window": candidate.window_name,
+                    "window_start": candidate.window_start,
+                    "window_end": candidate.window_end,
+                },
                 candidate.assumptions + (
                     "New York local window converted with IANA DST rules",
                     "candidate is only considered if the original window overlaps NSE cash hours",
@@ -401,7 +415,7 @@ class StockICTScanner:
             if self.config.enable_silver_bullet:
                 signals.extend(_silver_bullet_signals(
                     member.symbol, member.company_name, one, levels, context,
-                    scan_date, as_of, session,
+                    scan_date, as_of, session, current_price,
                 ))
             statuses.append(StockScanStatus(member.symbol, member.company_name, "READY",
                 "verified historical data available", len(one), len(five), len(fifteen), latest))
