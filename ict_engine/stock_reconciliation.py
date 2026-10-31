@@ -98,14 +98,18 @@ def reconcile_universe(
     """
     if not trading_dates:
         raise ValueError("trading_dates cannot be empty")
+    if len(universe.constituents) != 50 or len({x.symbol for x in universe.constituents}) != 50:
+        raise ValueError("universe snapshot must contain exactly 50 unique members")
+    if not timeframes or len(set(timeframes)) != len(timeframes):
+        raise ValueError("timeframes must be non-empty and unique")
     if any(trading_dates[i] >= trading_dates[i + 1] for i in range(len(trading_dates) - 1)):
         raise ValueError("trading_dates must be strictly increasing and unique")
     if calendar.exchange != "NSE":
         raise ValueError("NIFTY 50 stocks require the NSE trading calendar")
     if max_passes < 1 or max_passes > 5:
         raise ValueError("max_passes must be between 1 and 5")
-    if len(feed.instruments) != 50:
-        raise ValueError("all 50 Angel One instruments must be resolved before reconciliation")
+    if len(feed.instruments) != 50 or set(feed.instruments) != {x.symbol for x in universe.constituents}:
+        raise ValueError("all 50 Angel One instruments must exactly match the resolved universe")
     unknown = set(timeframes) - set(INTERVAL_MINUTES)
     if unknown:
         raise ValueError(f"unsupported timeframes: {sorted(unknown)}")
