@@ -55,3 +55,13 @@ def test_fvg_consequent_encroachment_is_midpoint():
 def test_invalid_dealing_range_rejected():
     with pytest.raises(ValueError):
         dealing_range(D("10"), D("10"))
+
+def test_equal_high_pool_does_not_chain_beyond_total_tolerance():
+    pools = equal_high_low_pools(
+        [candle(0, 100, 90), candle(1, 100.2, 89.8), candle(2, 100.4, 89.6)],
+        tolerance=D("0.25"),
+    )
+    bsl = [p for p in pools if p.side == "buy_side"]
+    assert len(bsl) == 1
+    assert len(bsl[0].member_prices) == 2
+    assert max(bsl[0].member_prices) - min(bsl[0].member_prices) <= D("0.25")
