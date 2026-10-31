@@ -319,7 +319,7 @@ class StockPaperStore:
         if end_date:
             sql += " AND entry_time_utc<?"
             params.append(_utc(datetime.combine(end_date + timedelta(days=1), datetime.min.time(), timezone.utc)))
-        sql += " ORDER BY entry_time_utc"
+        sql += " ORDER BY exit_time_utc,entry_time_utc"
         with self._connect() as db:
             rows = db.execute(sql, params).fetchall()
         keys = ["symbol","model_id","direction","entry_time","entry_price","stop","target","quantity",
