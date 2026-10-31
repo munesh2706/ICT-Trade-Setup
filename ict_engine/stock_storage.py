@@ -120,12 +120,18 @@ class StockCandleStore:
         return inserted
 
     def _load(self, symbol: str, timeframe: str, statuses: tuple[str, ...], start: datetime | None = None,
-              end: datetime | None = None) -> list[Candle]:
+              end: datetime | None = None, acquired_universe_id: str | None = None) -> list[Candle]:
         placeholders = ",".join("?" for _ in statuses)
         sql = f"""SELECT c.start_utc,c.open,c.high,c.low,c.close,c.volume,s.created_at_utc
             FROM stock_candles c JOIN stock_snapshots s ON s.snapshot_id=c.snapshot_id
             WHERE c.symbol=? AND c.timeframe=? AND s.status IN ({placeholders})"""
         params: list[object] = [symbol, timeframe, *statuses]
+        if acquired_universe_id is not None:
+            sql = """SELECT c.start_utc,c.open,c.high,c.low,c.close,c.volume,s.created_at_utc
+                FROM stock_candles c JOIN stock_snapshots s ON s.snapshot_id=c.snapshot_id
+                WHERE c.symbol=? AND c.timeframe=?
+                AND (s.status='VERIFIED' OR (s.status='ACQUIRED' AND s.universe_snapshot_id=?))"""
+            params = [symbol, timeframe, acquired_universe_id]
         if start is not None:
             sql += " AND c.start_utc>=?"
             params.append(_utc(start))
@@ -142,8 +148,11 @@ class StockCandleStore:
         return [chosen[key] for key in sorted(chosen)]
 
     def load_reconciliation_candles(self, symbol: str, timeframe: str,
-                                   start: datetime | None = None, end: datetime | None = None) -> list[Candle]:
-        return self._load(symbol, timeframe, ("VERIFIED", "ACQUIRED"), start, end)
+                                   start: datetime | None = None, end: datetime | None = None,
+                                   universe_snapshot_id: str | None = None) -> list[Candle]:
+        if universe_snapshot_id is None:
+            raise ValueError("universe_snapshot_id is required to include unverified acquisition data")
+        return self._load(symbol, timeframe, ("VERIFIED",), start, end, universe_snapshot_id)
 
     def load_verified_candles(self, symbol: str, timeframe: str,
                               start: datetime | None = None, end: datetime | None = None) -> list[Candle]:
