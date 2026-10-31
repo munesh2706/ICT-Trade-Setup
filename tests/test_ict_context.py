@@ -5,7 +5,7 @@ import pytest
 
 from ict_engine.context import (
     classify_premium_discount, dealing_range, equal_high_low_pools,
-    fvg_pd_array, previous_period_levels,
+    fvg_pd_array, previous_period_levels, directional_target_candidates,
 )
 from ict_engine.ict_2022_episode6 import fair_value_gaps
 from ict_engine.models import Candle
@@ -65,3 +65,14 @@ def test_equal_high_pool_does_not_chain_beyond_total_tolerance():
     assert len(bsl) == 1
     assert len(bsl[0].member_prices) == 2
     assert max(bsl[0].member_prices) - min(bsl[0].member_prices) <= D("0.25")
+
+def test_directional_target_candidates_keep_all_valid_levels_nearest_first():
+    levels = [
+        __import__("ict_engine.context", fromlist=["LiquidityLevel"]).LiquidityLevel("PDH", D("110"), "buy_side", "previous_day_high"),
+        __import__("ict_engine.context", fromlist=["LiquidityLevel"]).LiquidityLevel("PWH", D("120"), "buy_side", "previous_week_high"),
+        __import__("ict_engine.context", fromlist=["LiquidityLevel"]).LiquidityLevel("PDL", D("90"), "sell_side", "previous_day_low"),
+    ]
+    bullish = directional_target_candidates("bullish", D("100"), levels)
+    bearish = directional_target_candidates("bearish", D("100"), levels)
+    assert [x.name for x in bullish] == ["PDH", "PWH"]
+    assert [x.name for x in bearish] == ["PDL"]
