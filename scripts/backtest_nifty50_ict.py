@@ -53,6 +53,7 @@ def encode(value):
     return value
 
 def _summary(rows):
+    rows = sorted(rows, key=lambda row: row["exit_time"])
     trades = [TradeResult(
         gross_pnl=Decimal(row["gross_pnl"]),
         fees=Decimal(row["fees"]),
