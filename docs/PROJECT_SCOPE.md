@@ -2,61 +2,79 @@
 
 ## Objective
 
-Build an index-focused ICT analysis and research platform that recognises established ICT concepts and models, generates model-faithful signals, backtests them, and supports paper trading.
+Build a source-backed ICT research, signal-generation, historical-replay, broker-free paper-trading and visual-monitoring platform for the **50 individual NSE cash-equity constituents of the NIFTY 50**.
+
+This is the authoritative current scope for the stock platform. Older index-focused modules and documents are legacy research assets; they do not expand the active instrument universe.
 
 ## Instruments
 
-- NIFTY 50 index
-- BANKNIFTY index
-- SENSEX index
-
-Individual stocks and index options are on hold.
+- Exactly the 50 NIFTY 50 constituent stocks represented by a dated, provenance-preserving NSE constituent snapshot.
+- Each stock must resolve to its exact Angel One NSE EQ instrument/token and tick size before data acquisition or execution simulation.
+- No NIFTY index, BANKNIFTY index, SENSEX, index options, futures, or non-constituent equities in the active stock scanner.
+- Historical membership must be effective-dated. Today's constituent list must not be silently applied to historical periods.
 
 ## Included
 
-- ICT higher-timeframe analysis and daily/weekly bias context.
-- Liquidity mapping and liquidity-event recognition.
-- Market structure and displacement analysis.
-- ICT PD Arrays and consequent encroachment concepts.
-- Recognition of established ICT trade models and session/time concepts.
-- Signal records with model name, direction, context, evidence, entry logic, invalidation, and target logic.
-- Historical backtesting, paper execution, journaling, and performance reporting.
+- Source-backed, separately versioned ICT concepts and named models.
+- Higher-timeframe context and liquidity mapping where the source model requires it.
+- Liquidity-event, market-structure-shift, displacement and fair-value-gap evidence.
+- Model-specific session/time windows with correct exchange and IANA timezone handling.
+- Explainable signals with source candles, timestamps, model version, assumptions, entry references, invalidation references and liquidity targets.
+- Angel One historical candle acquisition, reconciliation, verified storage and live quote monitoring.
+- Event-driven historical replay, explicit costs/slippage assumptions, out-of-sample reporting and broker-free paper execution.
+- A local visual dashboard for universe readiness, quote freshness, setup evidence, verified candles, paper positions and performance.
+- A 15-minute balanced stock-selection layer (target two bullish/two bearish, up to four total) that prioritizes paper-entry eligibility without suppressing universe-wide ICT scanning.
+- A global maximum of one active paper position.
 
 ## Excluded
 
-- Creating a proprietary setup and presenting it as standard ICT.
-- Arbitrary indicator-based filters or generic TA rules substituted for ICT definitions.
-- Mixing unrelated ICT model variants without documenting the source and rationale.
-- Individual stock scanning and index options.
-- Live order placement and automated broker execution.
-- Any changes to the separate Nifty50Orderblock repository.
+- Fabricating, interpolating, forward-filling or silently substituting missing OHLCV or quotes.
+- Creating proprietary rules and presenting them as standard ICT.
+- Arbitrary indicator filters substituted for ICT model definitions.
+- Combining incompatible ICT model variants without explicit versioning and evidence.
+- Index/option trading in the active stock platform.
+- Live broker order placement, modification or cancellation.
+- Changes to the separate Nifty50Orderblock repository.
 
 ## Source hierarchy
 
-1. **Primary:** Michael J. Huddleston / The Inner Circle Trader's own mentorship lessons, official website, and original teaching material.
-2. **Secondary:** Reputable educational material used only to cross-check terminology or clarify a point—not to override primary ICT teaching.
-3. **Engineering specification:** Exact machine-readable interpretation of a source rule. Every engineering choice not explicitly stated in the source must be labelled as an implementation assumption, not attributed to ICT.
+1. **Primary:** Michael J. Huddleston / The Inner Circle Trader's original mentorship lessons, official website and original teaching material.
+2. **Secondary:** Reputable educational material used only to cross-check terminology or clarify source passages; it must not override primary teaching.
+3. **Engineering specification:** A machine-readable interpretation of the source rule. Every choice not explicitly prescribed by the source must be labelled as an implementation assumption, independently configurable where appropriate, and tested against annotated source examples.
 
-If two ICT lessons or model variants differ, preserve both as separately named/versioned variants until the user chooses which one to implement. Do not resolve a conflict by inventing a compromise.
+If two lessons or model variants differ, preserve them as separately named/versioned variants. Do not resolve a conflict by inventing a compromise.
 
-## Important distinction
+## Model fidelity and signal evidence
 
-ICT is a broad methodology and curriculum containing multiple concepts and trade models, not one single universally fixed entry setup. “Widely accepted ICT rules” therefore means faithfully implementing established definitions and named models, while explicitly identifying which model and teaching/source version is being used.
-
-## Trading and operating constraints
-
-The previously discussed intraday window and paper-only operation are platform operating constraints, not ICT methodology rules. They must remain configurable and must never be represented as rules taught by ICT. The exact market session mapping for Indian indices must be documented separately; do not directly copy New York clock times into IST without deliberate session-time conversion and source rationale.
+- A named ICT model is not a generic label for any FVG or market-structure pattern.
+- Each detector must implement only the conditions supported by its cited source lesson.
+- A signal must be reproducible from completed, verified source candles and retain the relevant candle timestamps and evidence.
+- No look-ahead, repainting, synthetic candles, retroactive fills or unverified data substitutions.
+- A no-trade result is valid. The scanner must not force a minimum signal count.
+- Engineering approximations (pivot widths, numerical displacement proxies, bar-count windows, fill policies, target selection and stop variants) must remain visibly distinguished from source-derived ICT rules.
 
 ## Data and validation
 
-- Select and document the price series used for each index (index spot or corresponding futures). Do not mix them silently.
-- Preserve raw data and source provenance.
-- Document exchange calendar, timezone, candle construction, and missing-bar handling.
-- No look-ahead bias, repainting, or future-candle confirmation.
-- Reproduce source rules in tests with annotated examples.
-- Backtest with realistic fees, slippage, and fill assumptions.
-- Use out-of-sample and walk-forward validation; report drawdown and expectancy, not just win rate.
+- Angel One SmartAPI is the sole price-data source for the active stock platform.
+- NSE official constituent files and official exchange circulars provide membership/calendar provenance, not substitute price data.
+- Preserve provider responses, acquisition metadata, instrument-master hash, candle snapshots and reconciliation outcomes.
+- Validate timestamp order, duplicates, OHLCV consistency, exchange sessions and expected completed-candle grids.
+- A stock with unresolved required candle gaps is not eligible for a confirmed signal or paper fill.
+- Derived timeframes are allowed only when all source candles are present and source lineage is retained.
+- Backtests must disclose survivorship bias, data coverage, model version, execution assumptions, costs and slippage.
+- Report expectancy, drawdown, sample size and out-of-sample performance; win rate alone is insufficient.
+- No profitability or production-readiness claim is permitted without evidence.
+
+## Trading and operating constraints
+
+- The active scanner operates on NSE cash-equity session hours and the explicit NSE trading calendar.
+- New York-local ICT windows must be converted using the IANA `America/New_York` timezone database; do not hard-code a fixed IST offset.
+- Paper risk limits, entry variants, stop references, target selection, quantity step, fees and slippage are platform execution settings, not ICT rules.
+- The dashboard is read-only and intended for localhost unless authentication and deployment security are separately implemented.
+- Stock selection is a ranking heuristic, not a predictive probability or ICT model. Initial relative-strength and industry-strength comparisons use the equal-weight NIFTY 50 constituent basket and NSE constituent Industry labels as proxies; no official NIFTY/sector-index prices are claimed.
+- Initial qualification threshold (60/100), replacement margin (8 points), and same-time RVOL minimum (10 prior-session samples, up to 20) are provisional engineering defaults and require historical sensitivity testing.
+- No live broker order endpoint may be called by the paper engine or dashboard.
 
 ## Change control
 
-Any departure from a cited ICT teaching, addition of a custom filter, or change to a model's conditions must be explicitly labelled as a deviation/experiment and approved before inclusion in the standard model implementation.
+Any departure from a cited ICT lesson, addition of a custom filter, change to a model condition, or change to an execution assumption must be documented as a separate deviation/experiment. It must not silently replace the source-faithful model.

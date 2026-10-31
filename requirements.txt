@@ -5,3 +5,5 @@ requests>=2.32.0
 websocket-client>=1.8.0
 logzero>=1.7.0
 tzdata>=2025.1
+fastapi>=0.115.0
+uvicorn>=0.30.0

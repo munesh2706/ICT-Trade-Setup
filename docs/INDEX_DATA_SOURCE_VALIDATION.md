@@ -1,4 +1,6 @@
-# Index Market-Data Source Validation
+# Legacy Index Market-Data Source Validation
+
+> **Legacy reference only.** This document records the earlier NIFTY/BANKNIFTY/SENSEX index-data investigation. The active project scope is NIFTY 50 individual NSE cash-equity constituents; this index validation is not used by the stock scanner or its readiness gate.
 
 **Review date:** 2026-10-30  
 **Status:** API capability and instrument identifiers documented; a local read-only validation harness is implemented; authenticated end-to-end validation is still pending.

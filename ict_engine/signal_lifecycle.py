@@ -22,7 +22,7 @@ TERMINAL = {SignalStatus.CLOSED, SignalStatus.NO_TRADE, SignalStatus.INVALIDATED
 ALLOWED = {
     SignalStatus.WATCHING: {SignalStatus.QUALIFIED, SignalStatus.NO_TRADE, SignalStatus.INVALIDATED, SignalStatus.EXPIRED, SignalStatus.CANCELLED_DATA},
     SignalStatus.QUALIFIED: {SignalStatus.ENTRY_ARMED, SignalStatus.NO_TRADE, SignalStatus.INVALIDATED, SignalStatus.EXPIRED, SignalStatus.CANCELLED_DATA, SignalStatus.REJECTED_RISK},
-    SignalStatus.ENTRY_ARMED: {SignalStatus.FILLED, SignalStatus.MISSED, SignalStatus.INVALIDATED, SignalStatus.EXPIRED, SignalStatus.CANCELLED_DATA, SignalStatus.REJECTED_RISK},
+    SignalStatus.ENTRY_ARMED: {SignalStatus.FILLED, SignalStatus.MISSED, SignalStatus.INVALIDATED, SignalStatus.EXPIRED, SignalStatus.CANCELLED_DATA, SignalStatus.REJECTED_RISK, SignalStatus.NO_TRADE},
     SignalStatus.FILLED: {SignalStatus.OPEN, SignalStatus.CLOSED},
     SignalStatus.OPEN: {SignalStatus.CLOSED},
 }

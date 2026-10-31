@@ -1,0 +1,415 @@
+"""Single-process NIFTY 50 stock session runner.
+
+Authenticates once, performs pre-session historical reconciliation, starts one
+Angel One WebSocket V2 quote stream, incrementally refreshes completed candles
+from Angel One Historical API, and runs the stock ICT scanner. No order APIs.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import threading
+import time
+from dataclasses import asdict, is_dataclass, replace
+from datetime import datetime, timedelta
+from decimal import Decimal
+from enum import Enum
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.reconcile_nifty50_history import load_calendar
+from ict_engine.stock_feed import AngelOneStockFeed
+from ict_engine.stock_live_refresh import refresh_current_session
+from ict_engine.stock_reconciliation import reconcile_universe
+from ict_engine.stock_scanner import StockICTScanConfig, StockICTScanner
+from ict_engine.stock_selection import apply_scan_readiness, rank_and_select_stocks, ranking_cycle_due
+from ict_engine.paper_store import StockPaperStore
+from ict_engine.paper_trading import StockPaperTradingEngine, load_paper_trading_config
+from ict_engine.stock_storage import StockCandleStore
+from ict_engine.stock_universe import download_nse_universe, save_universe_snapshot
+
+IST = ZoneInfo("Asia/Kolkata")
+
+def encode(value):
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if hasattr(value, "isoformat") and not isinstance(value, str):
+        return value.isoformat()
+    if isinstance(value, Enum):
+        return value.value
+    if is_dataclass(value):
+        return encode(asdict(value))
+    if isinstance(value, dict):
+        return {str(k): encode(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [encode(v) for v in value]
+    return value
+
+def _quote_record(quote, *, source: str):
+    stamp = getattr(quote, "exchange_timestamp", None)
+    received = quote.received_at
+    age = getattr(quote, "age_seconds", None)
+    stale = getattr(quote, "stale", None)
+    if age is None and stamp is not None:
+        age = (received - stamp).total_seconds()
+    if stale is None:
+        stale = age is None or age < -5 or age > 90
+    return {
+        "ltp": str(quote.ltp),
+        "exchange_timestamp": stamp.isoformat() if stamp is not None else None,
+        "received_at": received.isoformat(),
+        "age_seconds": age,
+        "stale": bool(stale),
+        "source": source,
+    }
+
+def _merge_quote_sources(latest_ticks, quote_batch):
+    selected = {}
+    if quote_batch is not None:
+        for quote in quote_batch.quotes:
+            selected[quote.symbol] = _quote_record(quote, source="Angel One SmartAPI FULL quote")
+    for symbol, tick in (latest_ticks or {}).items():
+        record = _quote_record(tick, source="Angel One WebSocket V2")
+        current = selected.get(symbol)
+        if current is None:
+            selected[symbol] = record
+            continue
+        if current["stale"] and not record["stale"]:
+            selected[symbol] = record
+            continue
+        if current["stale"] == record["stale"] and record["age_seconds"] is not None and (
+            current["age_seconds"] is None or record["age_seconds"] < current["age_seconds"]
+        ):
+            selected[symbol] = record
+    return selected
+
+def write_report(report, directory: Path, *, tick_count: int, stream_errors: list[str], latest_ticks=None, quote_batch=None, paper_report=None, expired_signals: int = 0, stock_selection=None):
+    directory.mkdir(parents=True, exist_ok=True)
+    payload = encode(report)
+    quotes = _merge_quote_sources(latest_ticks, quote_batch)
+    payload["live_stream"] = {
+        "ticks_received": tick_count,
+        "symbols_with_tick": len(latest_ticks or {}),
+        "symbols_with_quote": len(quotes),
+        "quotes": quotes,
+        "quote_api": {
+            "complete": quote_batch.complete,
+            "missing_symbols": list(quote_batch.missing_symbols),
+            "stale_symbols": list(quote_batch.stale_symbols),
+            "unfetched_tokens": list(quote_batch.unfetched_tokens),
+            "errors": list(quote_batch.errors),
+        } if quote_batch is not None else {"complete": False, "errors": ["quote API snapshot unavailable"]},
+        "recent_errors": stream_errors[-10:],
+        "source": "Angel One SmartAPI WebSocket V2 with FULL quote fallback",
+    }
+    if paper_report is not None:
+        payload["paper_trading"] = encode(paper_report)
+    if stock_selection is not None:
+        payload["stock_selection"] = encode(stock_selection)
+        payload["paper_trading"]["signals_expired_at_session_close"] = expired_signals
+    name = f"stock_scan_{report.scan_date.isoformat()}_{report.as_of.strftime('%H%M%S')}.json"
+    path = directory / name
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return path
+
+def _load_previous_selection(reports_dir: Path, scan_date) -> dict:
+    """Restore today's last ranking so a restart does not churn the watchlist."""
+    if not reports_dir.exists():
+        return {}
+    for path in sorted(reports_dir.glob("stock_scan_*.json"),
+                       key=lambda item: item.stat().st_mtime, reverse=True):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if payload.get("scan_date") == scan_date.isoformat():
+                selection = payload.get("stock_selection")
+                if isinstance(selection, dict):
+                    return selection
+        except (OSError, json.JSONDecodeError):
+            continue
+    return {}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Run the NIFTY 50 stock ICT session pipeline")
+    parser.add_argument("--calendar", type=Path, required=True)
+    parser.add_argument("--history-start", type=lambda x: datetime.strptime(x, "%Y-%m-%d").date(),
+                        default=datetime.strptime(os.environ["ICT_HISTORY_START_DATE"], "%Y-%m-%d").date()
+                        if os.getenv("ICT_HISTORY_START_DATE") else None)
+    parser.add_argument("--database", type=Path, default=ROOT / "data" / "nifty50_stocks.sqlite")
+    parser.add_argument("--universe-dir", type=Path, default=ROOT / "data" / "universe")
+    parser.add_argument("--reports-dir", type=Path, default=ROOT / "data" / "reports")
+    parser.add_argument("--paper-config", type=Path, default=ROOT / "config" / "paper_trading.json")
+    parser.add_argument("--history-timeframes", nargs="+", default=["1m", "5m", "15m"],
+                        choices=["1m", "3m", "5m", "10m", "15m", "30m", "1h"])
+    parser.add_argument("--pace-seconds", type=float, default=0.4)
+    parser.add_argument("--once", action="store_true", help="Run one refresh/scan cycle instead of the full session")
+    parser.add_argument("--disable-silver-bullet", action="store_true")
+    args = parser.parse_args()
+    if args.history_start is None:
+        parser.error("provide --history-start or set ICT_HISTORY_START_DATE")
+
+    feed = None
+    stream_started = False
+    try:
+        now = datetime.now(IST)
+        calendar = load_calendar(args.calendar)
+        if now.date() > calendar.coverage_end:
+            raise ValueError("NSE calendar does not cover today; update it from official circulars")
+        session = calendar.session_for(now.date())
+        if session is None:
+            raise ValueError("today is not an explicitly configured NSE trading session")
+        if args.history_start < calendar.coverage_start:
+            raise ValueError("history start is outside NSE calendar coverage")
+
+        # Enforce the agreed global one-position limit even if a local config
+        # still contains an older max_open_positions value.
+        paper_config = replace(load_paper_trading_config(args.paper_config), max_open_positions=1)
+        universe = download_nse_universe()
+        universe_path = save_universe_snapshot(universe, args.universe_dir)
+        feed = AngelOneStockFeed.connect_from_env(universe, pace_seconds=args.pace_seconds)
+        paper_engine = StockPaperTradingEngine(paper_config, feed.instruments)
+        args.database.parent.mkdir(parents=True, exist_ok=True)
+        store = StockCandleStore(args.database)
+        paper_journal = StockPaperStore(args.database)
+
+        all_cas_eligible = set(feed.instruments) <= feed.cas_eligible_symbols
+        def strategy_close_for(session):
+            return session.continuous_close_at if all_cas_eligible and session.continuous_close_at else session.close_at
+        completed_sessions = [
+            x for x in calendar.sessions_between(args.history_start, now.date())
+            if strategy_close_for(x).astimezone(IST) < now
+        ]
+        if not completed_sessions:
+            raise ValueError("no completed session exists in the configured historical warm-up range")
+        startup_close = strategy_close_for(completed_sessions[-1])
+        startup_expired = paper_engine.expire_pending_signals(paper_journal, startup_close)
+        historical_dates = [x.trading_date for x in completed_sessions]
+        historical = reconcile_universe(
+            universe=universe, feed=feed, store=store, calendar=calendar,
+            trading_dates=historical_dates, timeframes=args.history_timeframes,
+            max_passes=2,
+        )
+        print(json.dumps({
+            "phase": "PRE_SESSION_RECONCILIATION",
+            "verified": historical.verified,
+            "total_missing": historical.total_missing,
+            "universe_snapshot": str(universe_path),
+            "instrument_master_sha256": feed.master_sha256,
+        }, indent=2))
+        if not historical.verified:
+            print("DATA GATE CLOSED: scanner and paper engine will not start.")
+            return 2
+
+        now = datetime.now(IST)
+        latest_ticks = {}
+        stream_errors: list[str] = []
+        lock = threading.Lock()
+        tick_count = 0
+
+        def on_tick(tick):
+            nonlocal tick_count
+            with lock:
+                latest_ticks[tick.symbol] = tick
+                tick_count += 1
+
+        def on_error(error):
+            with lock:
+                stream_errors.append(str(error))
+
+        def on_open():
+            print("Angel One WebSocket V2 connected; 50 NSE EQ subscriptions requested.")
+
+        def on_close():
+            print("Angel One WebSocket V2 connection closed.")
+
+        feed.start_stream(on_tick, on_error=on_error, on_open=on_open, on_close=on_close, mode=2)
+        stream_started = True
+        scanner = StockICTScanner(StockICTScanConfig(enable_silver_bullet=not args.disable_silver_bullet))
+        stock_selection = _load_previous_selection(args.reports_dir, now.date())
+        last_ranked_at = None
+        if stock_selection.get("ranked_at"):
+            try:
+                last_ranked_at = datetime.fromisoformat(stock_selection["ranked_at"])
+            except (TypeError, ValueError):
+                stock_selection = {}
+        if not args.once and now < session.open_at.astimezone(IST):
+            wait_seconds = (session.open_at.astimezone(IST) - now).total_seconds()
+            print(f"Waiting {int(wait_seconds)} seconds for NSE session open.")
+            time.sleep(max(0, wait_seconds))
+
+        while True:
+            as_of = datetime.now(IST)
+            strategy_close = strategy_close_for(session)
+            if as_of >= strategy_close.astimezone(IST):
+                break
+            elapsed = int((as_of - session.open_at.astimezone(IST)).total_seconds() // 60)
+            timeframes = ["1m"]
+            if elapsed > 0 and elapsed % 5 == 0:
+                timeframes.append("5m")
+            if elapsed > 0 and elapsed % 15 == 0:
+                timeframes.append("15m")
+            refresh = refresh_current_session(
+                universe=universe, feed=feed, store=store, calendar=calendar,
+                as_of=as_of, timeframes=timeframes,
+            )
+            scan = scanner.scan_universe(
+                universe=universe, store=store, calendar=calendar,
+                scan_date=as_of.date(), as_of=as_of,
+                cas_eligible_symbols=feed.cas_eligible_symbols,
+            )
+            if args.once or ranking_cycle_due(as_of, last_ranked_at):
+                stock_selection = rank_and_select_stocks(
+                    universe=universe, store=store, calendar=calendar,
+                    scan_date=as_of.date(), as_of=as_of,
+                    cas_eligible_symbols=feed.cas_eligible_symbols,
+                    previous_selection=stock_selection.get("selected", []),
+                    minimum_score=float(os.getenv("ICT_STOCK_MIN_SCORE", "60")),
+                    replacement_margin=float(os.getenv("ICT_STOCK_REPLACEMENT_MARGIN", "8")),
+                )
+                last_ranked_at = as_of
+            # Do not wait for the next 15-minute ranking cycle to remove a
+            # selected stock whose current scanner data gate has failed.
+            stock_selection = apply_scan_readiness(stock_selection, scan.stock_status)
+            selected_rows = stock_selection.get("selected", [])
+            selected_symbols = {row["symbol"] for row in selected_rows}
+            selected_directions = {row["symbol"]: row["direction"] for row in selected_rows}
+            selected_priorities = {row["symbol"]: float(row["score"]) for row in selected_rows}
+            selected_since = {
+                row["symbol"]: datetime.fromisoformat(row["selected_since"])
+                for row in selected_rows if row.get("selected_since")
+            }
+            paper = paper_engine.process_scan_report(
+                scan, candles=store, journal=paper_journal, calendar=calendar,
+                cas_eligible_symbols=feed.cas_eligible_symbols,
+                eligible_symbols=selected_symbols,
+                eligible_directions=selected_directions,
+                signal_priorities=selected_priorities,
+                eligible_since=selected_since,
+            )
+            with lock:
+                count = tick_count
+                errors = list(stream_errors)
+                quotes = dict(latest_ticks)
+            quote_batch = None
+            try:
+                quote_batch = feed.fetch_full_quotes(max_age_seconds=90.0)
+                errors.extend(quote_batch.errors)
+                if not quote_batch.complete:
+                    errors.append(
+                        "FULL quote snapshot incomplete: "
+                        f"missing={len(quote_batch.missing_symbols)}, stale={len(quote_batch.stale_symbols)}, "
+                        f"unfetched={len(quote_batch.unfetched_tokens)}"
+                    )
+            except Exception as quote_exc:
+                errors.append(f"FULL quote fallback failed: {type(quote_exc).__name__}")
+            report_path = write_report(scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, quote_batch=quote_batch, paper_report=paper, expired_signals=startup_expired, stock_selection=stock_selection)
+            print(json.dumps({
+                "as_of": as_of.isoformat(),
+                "refreshed_series_ready": refresh.ready_series,
+                "refreshed_series_total": refresh.total_series,
+                "stocks_ready": scan.ready_stocks,
+                "signals": len(scan.signals),
+                "paper_positions_open": paper.open_positions,
+                "paper_positions_opened": paper.positions_opened,
+                "paper_positions_closed": paper.positions_closed,
+                "ticks_received": count,
+                "report": str(report_path),
+            }))
+            if args.once:
+                feed.stop_stream()
+                stream_started = False
+                return 0 if scan.ready_stocks == 50 else 2
+            next_minute = as_of.replace(second=0, microsecond=0) + timedelta(minutes=1)
+            time.sleep(max(0.0, (next_minute - datetime.now(IST)).total_seconds()))
+
+        # Bounded post-close reconciliation for final completed session bars.
+        final_as_of = strategy_close_for(session).astimezone(IST)
+        final_refresh = None
+        for attempt in range(3):
+            final_refresh = refresh_current_session(
+                universe=universe, feed=feed, store=store, calendar=calendar,
+                as_of=final_as_of, timeframes=args.history_timeframes,
+            )
+            if final_refresh.ready_series == final_refresh.total_series:
+                break
+            if attempt < 2:
+                time.sleep(5)
+        final_scan = scanner.scan_universe(
+            universe=universe, store=store, calendar=calendar,
+            scan_date=final_as_of.date(), as_of=final_as_of,
+            cas_eligible_symbols=feed.cas_eligible_symbols,
+        )
+        final_paper = paper_engine.process_scan_report(
+            final_scan, candles=store, journal=paper_journal, calendar=calendar,
+            cas_eligible_symbols=feed.cas_eligible_symbols,
+            eligible_symbols={row["symbol"] for row in stock_selection.get("selected", [])},
+            eligible_directions={row["symbol"]: row["direction"] for row in stock_selection.get("selected", [])},
+            signal_priorities={row["symbol"]: float(row["score"]) for row in stock_selection.get("selected", [])},
+            eligible_since={row["symbol"]: datetime.fromisoformat(row["selected_since"])
+                            for row in stock_selection.get("selected", []) if row.get("selected_since")},
+        )
+        final_session = calendar.session_for(final_as_of.date())
+        final_expired = 0
+        if final_session is not None:
+            final_close = strategy_close_for(final_session)
+            if final_as_of >= final_close:
+                final_expired = paper_engine.expire_pending_signals(paper_journal, final_close)
+            final_paper = replace(final_paper, pending_signals=len(paper_journal.pending_signals()))
+        with lock:
+            count = tick_count
+            errors = list(stream_errors)
+            quotes = dict(latest_ticks)
+        quote_batch = None
+        try:
+            quote_batch = feed.fetch_full_quotes(max_age_seconds=90.0)
+            errors.extend(quote_batch.errors)
+            if not quote_batch.complete:
+                errors.append(
+                    "Final FULL quote snapshot incomplete: "
+                    f"missing={len(quote_batch.missing_symbols)}, stale={len(quote_batch.stale_symbols)}, "
+                    f"unfetched={len(quote_batch.unfetched_tokens)}"
+                )
+        except Exception as quote_exc:
+            errors.append(f"Final FULL quote fallback failed: {type(quote_exc).__name__}")
+        report_path = write_report(final_scan, args.reports_dir, tick_count=count, stream_errors=errors, latest_ticks=quotes, quote_batch=quote_batch, paper_report=final_paper, expired_signals=startup_expired + final_expired, stock_selection=stock_selection)
+        print(json.dumps({
+            "phase": "POST_SESSION",
+            "ready_series": final_refresh.ready_series,
+            "total_series": final_refresh.total_series,
+            "stocks_ready": final_scan.ready_stocks,
+            "signals": len(final_scan.signals),
+            "paper_positions_open": final_paper.open_positions,
+            "paper_positions_opened": final_paper.positions_opened,
+            "paper_positions_closed": final_paper.positions_closed,
+            "pending_signals_expired": startup_expired + final_expired,
+            "report": str(report_path),
+        }, indent=2))
+        feed.stop_stream()
+        stream_started = False
+        return 0 if final_scan.ready_stocks == 50 else 2
+    except KeyboardInterrupt:
+        if feed is not None and stream_started:
+            try:
+                feed.stop_stream()
+            except Exception:
+                pass
+        return 130
+    except Exception as exc:
+        print(json.dumps({"status": "FAILED", "error": f"{type(exc).__name__}: {exc}"}, indent=2))
+        if feed is not None and stream_started:
+            try:
+                feed.stop_stream()
+            except Exception:
+                pass
+        return 1
+
+if __name__ == "__main__":
+    raise SystemExit(main())

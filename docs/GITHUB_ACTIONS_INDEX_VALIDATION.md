@@ -1,4 +1,6 @@
-# Run index validation with GitHub Actions
+# Legacy: Run index validation with GitHub Actions
+
+> **Legacy workflow.** This manual workflow validates the earlier index-only data path. It is separate from the active NIFTY 50 individual-stock platform and must not be interpreted as evidence that stock-market data coverage is validated.
 
 The repository includes a manually triggered workflow:
 

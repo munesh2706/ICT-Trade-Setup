@@ -2,17 +2,21 @@
 
 ## Architectural boundary
 
-The platform is split into five independently testable layers:
+The platform is split into independently testable layers:
 1. **Market data:** raw broker responses, canonical OHLC candles, timestamps, instrument metadata, session calendar and provenance.
-2. **ICT context:** dealing ranges, premium/discount, liquidity reference levels, swing structure and PD arrays.
-3. **Named model detectors:** source-versioned rule sets. A detector returns evidence and candidate state; it does not place orders.
-4. **Signal/risk layer:** validates entry variant, invalidation, target references, risk budget and operational constraints.
-5. **Research execution:** historical simulation and broker-free paper trading, journals and reports.
+2. **Market intelligence and stock selection:** 50-stock discovery, same-time RVOL, constituent-basket/industry proxies, directional rankings and a stable four-stock watchlist refreshed every 15 minutes.
+3. **ICT context:** dealing ranges, premium/discount, liquidity reference levels, swing structure and PD arrays.
+4. **Named model detectors:** source-versioned rule sets. A detector returns evidence and candidate state; it does not place orders.
+5. **Signal/risk layer:** validates entry variant, invalidation, target references, risk budget and the global one-position limit.
+6. **Research execution:** historical simulation and broker-free paper trading, journals and reports.
+
+The stock selector and ICT scanner run in parallel. The scanner continues evaluating the complete 50-stock universe; the selector controls dashboard prioritization and which directionally aligned stock signals are eligible for paper entry. A newly selected stock's entry scan begins no earlier than its selection timestamp, preventing retroactive fills.
 
 No layer may silently repair missing data or change another layer's source rules.
 
 ## Data contract
-- Instrument identity is explicit: NIFTY 50 index, BANKNIFTY index, or SENSEX index.
+- Active instrument identity is an exact NIFTY 50 constituent NSE cash-equity symbol, Angel One NSE EQ token, exchange segment and tick size resolved from the dated universe snapshot and instrument master.
+- Index-only code and validation documents are legacy assets; they are not active inputs to the NIFTY 50 stock scanner.
 - Price series identity is explicit. Spot index and futures are different series and must never be concatenated or silently substituted.
 - All stored timestamps are timezone-aware. Exchange-local presentation uses Asia/Kolkata.
 - Candle intervals are anchored to the documented exchange session calendar, not to the machine's local timezone.
@@ -88,8 +92,19 @@ Not every model uses every state. Model-specific transitions must be explicit; n
 - Use walk-forward evaluation and parameter sensitivity. Do not optimize against the final test period.
 - A zero-trade or negative-expectancy result is valid.
 
+## Stock-selection safeguards
+- Ranking refreshes on 15-minute wall-clock boundaries; candle ingestion and ICT processing continue at their own 1m/5m/15m cadence.
+- Target balance is two bullish and two bearish candidates, but the selector may return 3:1 or fewer than four when the score threshold is not met.
+- A selected stock remains selected unless a same-direction challenger exceeds it by the configured replacement margin; hard data-quality failures remove it immediately.
+- Same-time 5m RVOL uses the latest completed 5m slot against up to 20 prior sessions and requires at least 10 observations. Insufficient history blocks selection rather than fabricating a baseline.
+- Relative strength uses an equal-weight average of the eligible NIFTY 50 constituent basket; industry strength uses the NSE constituent Industry field. These are transparent proxies, not official index/sector-index feeds.
+- The initial 60/100 qualification threshold and 8-point replacement margin are configurable engineering defaults, not validated trading edges.
+- The selector does not change ICT model definitions or suppress universe-wide signal detection.
+
 ## Paper trading safeguards
 - Paper-only adapter; no broker order endpoints or order-placement code.
+- The live runner and historical replay enforce one global active paper position.
+- Paper-entry candidates must belong to the current selected watchlist and match its selected direction; a candidate's entry scan starts no earlier than its watchlist activation and the first 1m bar after the prior position's exit bar.
 - A paper position needs entry, invalidation, target plan, quantity, cost model and model evidence before opening.
 - Risk limits are configuration, not hardcoded personal assumptions.
 - Rejected signals remain in journal with rejection reason.
