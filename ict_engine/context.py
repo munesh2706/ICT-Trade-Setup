@@ -11,7 +11,7 @@ from decimal import Decimal
 from datetime import datetime
 from typing import Sequence
 
-from .models import Candle, FairValueGap
+from .models import Candle, ExternalLiquiditySweep, FairValueGap
 
 ZERO = Decimal("0")
 HALF = Decimal("0.5")
@@ -192,3 +192,18 @@ def build_market_context(
         draws_above=above,
         draws_below=below,
     )
+
+
+def external_liquidity_sweeps(
+    candles: Sequence[Candle], levels: Sequence[LiquidityLevel]
+) -> list[ExternalLiquiditySweep]:
+    """Detect first penetration of completed-period/equal-high-low liquidity."""
+    events = []
+    for i, candle in enumerate(candles):
+        previous = candles[i - 1] if i else None
+        for level in levels:
+            if level.side == "buy_side" and candle.high > level.price and (previous is None or previous.high <= level.price):
+                events.append(ExternalLiquiditySweep(i, level.name, level.price, level.side, level.source, candle.high, "buy_side"))
+            elif level.side == "sell_side" and candle.low < level.price and (previous is None or previous.low >= level.price):
+                events.append(ExternalLiquiditySweep(i, level.name, level.price, level.side, level.source, candle.low, "sell_side"))
+    return events
