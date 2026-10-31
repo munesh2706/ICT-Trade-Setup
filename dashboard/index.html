@@ -37,14 +37,14 @@ table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;colo
 </section>
 <section class="grid">
 <div class="panel"><h2>Constituent monitor</h2><div class="toolbar"><input id="search" placeholder="Search symbol or company"><select id="stockFilter"><option value="all">All stocks</option><option value="signals">With signals</option><option value="ready">Data ready</option><option value="gaps">Data not ready</option></select></div>
-<div class="scroll"><table><thead><tr><th>Stock</th><th>LTP</th><th>Feed age</th><th>Data</th></tr></thead><tbody id="stocks"><tr><td colspan="4" class="empty">Waiting for report…</td></tr></tbody></table></div></div>
+<div class="scroll"><table><thead><tr><th>Stock / bars</th><th>LTP</th><th>Feed age</th><th>Data</th></tr></thead><tbody id="stocks"><tr><td colspan="4" class="empty">Waiting for report…</td></tr></tbody></table></div></div>
 <div class="panel"><h2>Detected ICT setups</h2><div class="toolbar"><select id="modelFilter"><option value="all">All models</option><option value="episode6">ICT 2022 Episode 6</option><option value="silver">Silver Bullet</option></select></div>
 <div id="signals" class="signal-list"><div class="empty">No signals loaded.</div></div>
 <div class="chartwrap"><div class="charthead"><strong id="chartTitle">Select a signal to inspect price structure</strong><select id="timeframe"><option>5m</option><option>1m</option><option>15m</option></select></div><canvas id="chart"></canvas></div></div>
 <div class="panel right"><h2>Signal explanation</h2><div id="detail" class="detail"><div class="empty">Select an ICT signal. The panel explains the liquidity event, MSS, FVG, targets and invalidation levels.</div></div></div>
 </section>
 <section class="lower">
-<div class="panel"><h2>Open paper positions</h2><div class="scroll"><table><thead><tr><th>Stock</th><th>Side</th><th>Entry</th><th>Stop</th><th>Target</th><th>Qty</th></tr></thead><tbody id="positions"><tr><td colspan="6" class="empty">No open positions.</td></tr></tbody></table></div></div>
+<div class="panel"><h2>Open paper positions</h2><div class="scroll"><table><thead><tr><th>Stock</th><th>Side</th><th>Entry</th><th>LTP</th><th>Gross UPL</th><th>Stop</th><th>Target</th><th>Qty</th></tr></thead><tbody id="positions"><tr><td colspan="8" class="empty">No open positions.</td></tr></tbody></table></div></div>
 <div class="panel"><h2>Recent closed paper trades</h2><div class="scroll"><table><thead><tr><th>Stock</th><th>Side</th><th>Net P&L</th><th>R</th><th>Exit reason</th></tr></thead><tbody id="closed"><tr><td colspan="5" class="empty">No closed trades.</td></tr></tbody></table></div></div>
 </section>
 <div class="footer">No broker orders are sent. Signals and fills are derived from verified Angel One data only.</div>
@@ -71,7 +71,7 @@ function renderSignals(d){
 }
 function renderPositions(d){
  const open=d.open_positions||[];
- $("positions").innerHTML=open.map(p=>'<tr><td><strong>'+esc(p.symbol)+'</strong><div class="muted">'+esc(p.model_id)+'</div></td><td>'+esc(p.direction)+'</td><td>'+fmt(p.entry_price)+'</td><td>'+fmt(p.stop)+'</td><td>'+fmt(p.target)+'</td><td>'+fmt(p.quantity,0)+'</td></tr>').join("")||'<tr><td colspan="6" class="empty">No open positions.</td></tr>';
+ $("positions").innerHTML=open.map(p=>'<tr><td><strong>'+esc(p.symbol)+'</strong><div class="muted">'+esc(p.model_id)+'</div></td><td>'+esc(p.direction)+'</td><td>'+fmt(p.entry_price)+'</td><td>'+fmt(p.ltp)+'</td><td class="'+(Number(p.unrealized_gross_pnl)>=0?"good":"bad")+'">'+fmt(p.unrealized_gross_pnl)+'</td><td>'+fmt(p.stop)+'</td><td>'+fmt(p.target)+'</td><td>'+fmt(p.quantity,0)+'</td></tr>').join("")||'<tr><td colspan="6" class="empty">No open positions.</td></tr>';
  const closed=(d.closed_trades||[]).slice(-30).reverse();
  $("closed").innerHTML=closed.map(p=>'<tr><td>'+esc(p.symbol)+'</td><td>'+esc(p.direction)+'</td><td class="'+(Number(p.net_pnl)>=0?"good":"bad")+'">'+fmt(p.net_pnl)+'</td><td>'+fmt(p.r_multiple)+'</td><td>'+esc(p.exit_reason)+'</td></tr>').join("")||'<tr><td colspan="5" class="empty">No closed trades.</td></tr>';
 }
