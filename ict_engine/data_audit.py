@@ -1,7 +1,7 @@
 """Calendar-based data coverage audit and snapshot verification."""
 from __future__ import annotations
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timezone
 from typing import Mapping, Sequence
 from .market_calendar import ExchangeCalendar
 from .models import Candle
@@ -24,9 +24,14 @@ def audit_candle_grid(candles: Sequence[Candle], *, calendar: ExchangeCalendar, 
         raise ValueError("trading_dates cannot be empty")
     expected = []
     for day in trading_dates:
-        expected.extend(calendar.expected_candle_starts(day, interval_minutes))
-    expected_utc = {x.astimezone(__import__('datetime').timezone.utc).isoformat(timespec="microseconds") for x in expected}
-    observed_utc = [c.timestamp.astimezone(__import__('datetime').timezone.utc).isoformat(timespec="microseconds") for c in candles]
+        if interval_minutes == 1440:
+            session = calendar.session_for(day)
+            if session is not None:
+                expected.append(session.open_at)
+        else:
+            expected.extend(calendar.expected_candle_starts(day, interval_minutes))
+    expected_utc = {x.astimezone(timezone.utc).isoformat(timespec="microseconds") for x in expected}
+    observed_utc = [c.timestamp.astimezone(timezone.utc).isoformat(timespec="microseconds") for c in candles]
     if any(observed_utc[i] >= observed_utc[i + 1] for i in range(len(observed_utc) - 1)):
         raise ValueError("observed candles must be chronological and duplicate-free")
     observed_set = set(observed_utc)
