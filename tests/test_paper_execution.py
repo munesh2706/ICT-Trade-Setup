@@ -48,3 +48,7 @@ def test_short_target_gap_gets_favourable_open_fill():
     result = resolve_barrier_exit(bar(85, 90, 80, 88), direction="short", stop=D("110"), target=D("90"))
     assert result.reason == "take_profit"
     assert result.price == D("85")
+
+def test_invalid_barrier_order_rejected():
+    with pytest.raises(ValueError):
+        resolve_barrier_exit(bar(100, 110, 90, 105), direction="long", stop=D("120"), target=D("110"))
