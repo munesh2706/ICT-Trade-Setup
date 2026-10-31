@@ -4,7 +4,7 @@
 
 1. Install project dependencies in the repository virtual environment.
 2. Configure the four Angel One SmartAPI values in the local .env file. Never paste them into chat or commit them.
-3. Review the NSE calendar coverage. The bundled calendar currently ends on 2026-10-31. Add later sessions only from official NSE holiday/timing circulars before running on a later date.
+3. Review the NSE calendar coverage. The bundled calendar currently ends on 2026-11-07. Add later sessions only from official NSE holiday/timing circulars before running on a later date.
 4. Choose the earliest historical date required by the ICT models. The selected date must be within the calendar coverage and within the historical data Angel One actually returns.
 
 ## Before each trading session
