@@ -32,6 +32,8 @@ def load_calendar(path: Path) -> ExchangeCalendar:
             datetime.fromisoformat(row["open_at"]),
             datetime.fromisoformat(row["close_at"]),
             row["source"],
+            datetime.fromisoformat(row["continuous_close_at"]) if row.get("continuous_close_at") else None,
+            row.get("continuous_close_source"),
         ) for row in payload["sessions"]
     ]
     return ExchangeCalendar(
