@@ -99,6 +99,10 @@ Not every model uses every state. Model-specific transitions must be explicit; n
 ## Current implementation status
 Implemented in the current feature branch:
 - Candle and event domain types.
+- Read-only Angel One historical index adapter with documented interval request chunking and pacing.
+- Immutable SQLite candle snapshots with ACQUIRED/VERIFIED/FAILED states.
+- Exchange-calendar candle-grid audit; only VERIFIED snapshots are backtest-readable.
+- Explicit index instrument registry for NIFTY, BANKNIFTY and SENSEX.
 - Confirmed swing pivots with right-bar confirmation.
 - Liquidity penetration events at confirmed swings.
 - Bullish/bearish three-candle FVG geometry.
