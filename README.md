@@ -46,3 +46,15 @@ The project reference catalogue is in [docs/ICT_FRAMEWORK_REFERENCE.md](docs/ICT
 ## Project boundary
 
 This repository is independent of Nifty50Orderblock. Do not access or modify that project as part of this work.
+
+## Read-only historical data acquisition
+
+After installing `requirements.txt` and configuring the four local Angel One variables in `.env`, historical spot-index candles can be acquired with:
+
+```powershell
+python scripts\fetch_index_history.py --start "2026-10-30 09:15" --end "2026-10-30 15:30" --timeframe 1m --instruments NIFTY BANKNIFTY SENSEX
+```
+
+The end timestamp is exclusive and uses India local time. The script verifies the instrument master, respects interval-specific historical request windows and API pacing, retains raw response batches, and writes an immutable SQLite snapshot. It performs no order operations.
+
+**Important:** successful acquisition creates an `ACQUIRED` snapshot, not a `VERIFIED` dataset. The exchange-calendar coverage audit must pass before the data store will permit backtest reads. Do not treat an acquired snapshot as complete market history.
