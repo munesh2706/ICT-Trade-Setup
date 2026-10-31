@@ -34,7 +34,11 @@ An unresolved API error or missing candle leaves the new snapshot ACQUIRED and t
 
 ## Calendar contract
 
-The calendar JSON must explicitly define:
+A source-backed NSE equity calendar for 2026-01-01 through 2026-10-31 is included at `data/calendars/nse_2026_through_2026-10-31.json`. It includes the official 2026 equity holidays and the special Sunday 01-Feb-2026 budget trading session. It intentionally stops on 31-Oct-2026; the 08-Nov-2026 Muhurat session is not guessed because NSE had not yet notified its session timings as of that cutoff. Extend the calendar only after the relevant official circular is available.
+
+The calendar uses NSE's published regular equity hours (09:15–15:30) and official holiday list. Sources: [NSE Market Timings & Holidays](https://www.nseindia.com/resources/exchange-communication-holidays), [NSE circular FAOP72352 for 01-Feb-2026 special session](https://nsearchives.nseindia.com/content/circulars/FAOP72352.pdf).
+
+For dates beyond the bundled coverage, the calendar JSON must explicitly define:
 - exchange = NSE and timezone = Asia/Kolkata;
 - coverage_start and coverage_end;
 - every regular or special open session with exact open_at, close_at and source;
