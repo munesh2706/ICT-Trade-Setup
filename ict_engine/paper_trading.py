@@ -306,6 +306,7 @@ class StockPaperTradingEngine:
                             "Silver Bullet remains an alert-only model until its entry chronology is implemented",
                             "no-trade-silver-bullet")
                 no_trade += 1
+                actions.append({"signal_id": signal.signal_id, "symbol": signal.symbol, "action": "alert_only"})
                 continue
             if current_status != SignalStatus.ENTRY_ARMED:
                 continue
