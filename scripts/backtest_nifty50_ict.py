@@ -34,6 +34,12 @@ from ict_engine.paper_trading import StockPaperTradingEngine, load_paper_trading
 from ict_engine.performance import TradeResult, summarize_trades
 
 IST = ZoneInfo("Asia/Kolkata")
+SCANNER_CONTEXT_WARMUP_MINUTES = 15
+
+
+def _first_scan_time(session) -> datetime:
+    """Earliest time all scanner-required 1m/5m/15m bars can be complete."""
+    return session.open_at.astimezone(IST) + timedelta(minutes=SCANNER_CONTEXT_WARMUP_MINUTES)
 
 
 def encode(value):
@@ -139,8 +145,12 @@ def run_backtest(args) -> dict:
     scanner = StockICTScanner(StockICTScanConfig(enable_silver_bullet=not args.disable_silver_bullet))
     scan_count = 0
     for session in replay_sessions:
-        as_of = session.open_at.astimezone(IST) + timedelta(minutes=1)
+        as_of = _first_scan_time(session)
         close_at = session.close_at.astimezone(IST)
+        if as_of > close_at:
+            raise ValueError(
+                f"session {session.trading_date} closes before the scanner's 15-minute context warm-up completes"
+            )
         while as_of <= close_at:
             report = scanner.scan_universe(
                 universe=universe, store=source, calendar=calendar,
@@ -182,6 +192,7 @@ def run_backtest(args) -> dict:
         "warmup_start": warmup_start.isoformat(),
         "scan_count": scan_count,
         "scan_frequency": "1 minute",
+        "first_daily_scan_offset_minutes": SCANNER_CONTEXT_WARMUP_MINUTES,
         "survivorship_bias_warning": survivorship_warning,
         "cost_and_risk_config": {
             "starting_equity": str(paper_config.starting_equity),
