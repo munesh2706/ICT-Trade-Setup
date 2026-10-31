@@ -158,13 +158,16 @@ def main() -> int:
         store = StockCandleStore(args.database)
         paper_journal = StockPaperStore(args.database)
 
+        all_cas_eligible = set(feed.instruments) <= feed.cas_eligible_symbols
+        def strategy_close_for(session):
+            return session.continuous_close_at if all_cas_eligible and session.continuous_close_at else session.close_at
         completed_sessions = [
             x for x in calendar.sessions_between(args.history_start, now.date())
-            if (x.continuous_close_at or x.close_at).astimezone(IST) < now
+            if strategy_close_for(x).astimezone(IST) < now
         ]
         if not completed_sessions:
             raise ValueError("no completed session exists in the configured historical warm-up range")
-        startup_close = completed_sessions[-1].continuous_close_at or completed_sessions[-1].close_at
+        startup_close = strategy_close_for(completed_sessions[-1])
         startup_expired = paper_engine.expire_pending_signals(paper_journal, startup_close)
         historical_dates = [x.trading_date for x in completed_sessions]
         historical = reconcile_universe(
@@ -216,7 +219,7 @@ def main() -> int:
 
         while True:
             as_of = datetime.now(IST)
-            strategy_close = session.continuous_close_at or session.close_at
+            strategy_close = strategy_close_for(session)
             if as_of >= strategy_close.astimezone(IST):
                 break
             elapsed = int((as_of - session.open_at.astimezone(IST)).total_seconds() // 60)
@@ -275,7 +278,7 @@ def main() -> int:
             time.sleep(max(0.0, (next_minute - datetime.now(IST)).total_seconds()))
 
         # Bounded post-close reconciliation for final completed session bars.
-        final_as_of = (session.continuous_close_at or session.close_at).astimezone(IST)
+        final_as_of = strategy_close_for(session).astimezone(IST)
         final_refresh = None
         for attempt in range(3):
             final_refresh = refresh_current_session(
@@ -298,7 +301,7 @@ def main() -> int:
         final_session = calendar.session_for(final_as_of.date())
         final_expired = 0
         if final_session is not None:
-            final_close = final_session.continuous_close_at or final_session.close_at
+            final_close = strategy_close_for(final_session)
             if final_as_of >= final_close:
                 final_expired = paper_engine.expire_pending_signals(paper_journal, final_close)
             final_paper = replace(final_paper, pending_signals=len(paper_journal.pending_signals()))
