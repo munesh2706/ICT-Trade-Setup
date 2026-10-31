@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import date, timezone
 from typing import Mapping, Sequence
 from .market_calendar import ExchangeCalendar
+from .instruments import INDEX_INSTRUMENTS
 from .models import Candle
 from .storage import CandleStore
 
@@ -47,6 +48,9 @@ def verify_snapshot(store: CandleStore, snapshot_id: str, requirements: Mapping[
         raise ValueError("at least one instrument/timeframe requirement is required")
     audits = {}
     for (instrument_id, timeframe), (calendar, dates) in requirements.items():
+        spec = INDEX_INSTRUMENTS.get(instrument_id)
+        if spec is not None and calendar.exchange != spec.exchange:
+            raise ValueError(f"calendar exchange mismatch for {instrument_id}")
         if timeframe not in TIMEFRAME_MINUTES:
             raise ValueError(f"unsupported timeframe: {timeframe}")
         candles = store.load_candles(instrument_id, timeframe, snapshot_id, allow_incomplete=True)
