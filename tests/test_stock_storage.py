@@ -16,7 +16,7 @@ def test_stock_store_immutable_snapshots_and_status_gate(tmp_path):
     store.store_candles("snap1", "RELIANCE", "1m", "123", [candle(15)])
     assert store.load_verified_candles("RELIANCE", "1m") == []
     store.finalize("snap1", "ACQUIRED")
-    assert len(store.load_reconciliation_candles("RELIANCE", "1m")) == 1
+    assert len(store.load_reconciliation_candles("RELIANCE", "1m", universe_snapshot_id="universe1")) == 1
     assert store.load_verified_candles("RELIANCE", "1m") == []
     store.mark_universe_snapshots_verified("universe1")
     assert len(store.load_verified_candles("RELIANCE", "1m")) == 1
