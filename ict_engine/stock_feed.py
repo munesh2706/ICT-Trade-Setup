@@ -29,6 +29,29 @@ ROOT = Path(__file__).resolve().parents[1]
 class StockFeedError(RuntimeError):
     pass
 
+@dataclass(frozen=True, slots=True)
+class StockQuote:
+    symbol: str
+    token: str
+    ltp: Decimal
+    exchange_timestamp: datetime | None
+    received_at: datetime
+    age_seconds: float | None
+    stale: bool
+
+@dataclass(frozen=True, slots=True)
+class QuoteBatch:
+    quotes: tuple[StockQuote, ...]
+    missing_symbols: tuple[str, ...]
+    stale_symbols: tuple[str, ...]
+    unfetched_tokens: tuple[str, ...]
+    errors: tuple[str, ...]
+    received_at: datetime
+
+    @property
+    def complete(self) -> bool:
+        return not self.missing_symbols and not self.stale_symbols and not self.unfetched_tokens and not self.errors
+
 class AngelOneStockFeed:
     def __init__(self, client, instruments: dict[str, StockInstrument], *, pace_seconds: float = 1.0, master_sha256: str = ""):
         if pace_seconds < (1 / 3):
@@ -40,6 +63,7 @@ class AngelOneStockFeed:
         self.pace_seconds = pace_seconds
         self.master_sha256 = master_sha256
         self._last_request_at = 0.0
+        self._last_quote_request_at = 0.0
         self.raw_responses: list[dict] = []
 
     @classmethod
@@ -121,6 +145,103 @@ class AngelOneStockFeed:
         if any(candles[i].timestamp >= candles[i + 1].timestamp for i in range(len(candles) - 1)):
             raise StockFeedError(f"Angel One response for {symbol}/{timeframe} is duplicated or out of order")
         return candles
+
+    @staticmethod
+    def _parse_exchange_time(value) -> datetime | None:
+        if value in (None, ""):
+            return None
+        text = str(value).strip()
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=IST)
+            return parsed.astimezone(IST)
+        except ValueError:
+            for fmt in ("%d-%b-%Y %H:%M:%S", "%d-%b-%Y %H:%M"):
+                try:
+                    return datetime.strptime(text, fmt).replace(tzinfo=IST)
+                except ValueError:
+                    pass
+        return None
+
+    def fetch_full_quotes(self, *, max_age_seconds: float = 90.0) -> QuoteBatch:
+        """Fetch one FULL quote batch for all 50 NSE stocks via SmartAPI.
+
+        SmartAPI documents 50 symbols per market-data request and a one-request
+        per-second rate. Staleness is reported from exchange feed time; missing
+        timestamps are not assumed fresh. This is a quote snapshot, not a
+        substitute for the historical candle reconciliation process.
+        """
+        if max_age_seconds <= 0:
+            raise ValueError("max_age_seconds must be positive")
+        wait = 1.0 - (time.monotonic() - self._last_quote_request_at)
+        if wait > 0:
+            time.sleep(wait)
+        self._last_quote_request_at = time.monotonic()
+        token_to_symbol = {item.token: symbol for symbol, item in self.instruments.items()}
+        params = {"NSE": list(token_to_symbol)}
+        try:
+            payload = self._client.getMarketData("FULL", params)
+        except Exception as exc:
+            raise StockFeedError(f"Angel One FULL quote request failed: {type(exc).__name__}") from None
+        received_at = datetime.now(IST)
+        if not isinstance(payload, dict) or payload.get("status") is not True:
+            code = payload.get("errorcode") if isinstance(payload, dict) else "INVALID_RESPONSE"
+            raise StockFeedError(f"Angel One FULL quote request rejected: {code}")
+        data = payload.get("data") or {}
+        fetched = data.get("fetched") if isinstance(data, dict) else None
+        unfetched = data.get("unfetched") if isinstance(data, dict) else None
+        if not isinstance(fetched, list):
+            raise StockFeedError("Angel One FULL quote response has no fetched list")
+        seen: set[str] = set()
+        quotes: list[StockQuote] = []
+        errors: list[str] = []
+        stale_symbols: list[str] = []
+        for row in fetched:
+            if not isinstance(row, dict):
+                errors.append("malformed quote row")
+                continue
+            token = str(row.get("symbolToken", row.get("symboltoken", ""))).strip()
+            symbol = token_to_symbol.get(token)
+            if symbol is None:
+                errors.append(f"unknown quote token {token or '<blank>'}")
+                continue
+            if symbol in seen:
+                errors.append(f"duplicate quote row for {symbol}")
+                continue
+            seen.add(symbol)
+            try:
+                ltp = Decimal(str(row.get("ltp")))
+                if not ltp.is_finite() or ltp <= 0:
+                    raise InvalidOperation
+            except (InvalidOperation, TypeError, ValueError):
+                errors.append(f"invalid LTP for {symbol}")
+                continue
+            stamp = self._parse_exchange_time(row.get("exchFeedTime", row.get("exch_feed_time")))
+            age = (received_at - stamp).total_seconds() if stamp else None
+            stale = age is None or age < -5 or age > max_age_seconds
+            if stale:
+                stale_symbols.append(symbol)
+            quotes.append(StockQuote(symbol, token, ltp, stamp, received_at, age, stale))
+        missing = tuple(sorted(set(self.instruments) - seen))
+        unfetched_tokens = []
+        if isinstance(unfetched, list):
+            for row in unfetched:
+                if isinstance(row, dict):
+                    token = str(row.get("symbolToken", row.get("symboltoken", ""))).strip()
+                    unfetched_tokens.append(token or "<blank>")
+                else:
+                    unfetched_tokens.append(str(row))
+        elif unfetched not in (None, []):
+            errors.append("malformed unfetched quote list")
+        return QuoteBatch(
+            tuple(sorted(quotes, key=lambda x: x.symbol)),
+            missing,
+            tuple(sorted(set(stale_symbols))),
+            tuple(unfetched_tokens),
+            tuple(errors),
+            received_at,
+        )
 
     def fetch_range(self, symbol: str, timeframe: str, start: datetime, end: datetime) -> list[Candle]:
         """Fetch a range in non-overlapping provider-sized chunks."""
