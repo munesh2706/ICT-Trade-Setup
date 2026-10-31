@@ -1,0 +1,182 @@
+name: NIFTY 50 Stock Authenticated Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      validation_date:
+        description: "Completed NSE session date to validate (YYYY-MM-DD)"
+        required: true
+        default: "2026-10-30"
+        type: string
+      source_ref:
+        description: "Feature branch or commit containing the stock platform"
+        required: true
+        default: "eea6c7b2e6ef7ad302092234a8f06191076c3f12"
+        type: string
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/nifty50-stock-authenticated-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nifty50-stock-authenticated-validation
+  cancel-in-progress: false
+
+jobs:
+  authenticated-stock-validation:
+    name: Angel One NIFTY 50 integration checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ANGEL_API_KEY: ${{ secrets.ANGEL_API_KEY }}
+      ANGEL_CLIENT_CODE: ${{ secrets.ANGEL_CLIENT_CODE }}
+      ANGEL_PIN: ${{ secrets.ANGEL_PIN }}
+      ANGEL_TOTP_SECRET: ${{ secrets.ANGEL_TOTP_SECRET }}
+      VALIDATION_DATE: ${{ github.event.inputs.validation_date || '2026-10-30' }}
+      SOURCE_REF: ${{ github.event.inputs.source_ref || 'eea6c7b2e6ef7ad302092234a8f06191076c3f12' }}
+
+    steps:
+      - name: Check out stock platform source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_REF }}
+          path: source
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: source/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r source/requirements.txt pytest
+
+      - name: Verify required GitHub Secrets are available
+        shell: bash
+        run: |
+          missing=0
+          for name in ANGEL_API_KEY ANGEL_CLIENT_CODE ANGEL_PIN ANGEL_TOTP_SECRET; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Required GitHub Actions secret is not configured: ${name}"
+              missing=1
+            fi
+          done
+          if [[ "$missing" -ne 0 ]]; then
+            exit 1
+          fi
+          echo "All four required secret values are present (values are not displayed)."
+
+      - name: Run deterministic stock-platform tests
+        run: python -m pytest -q source/tests
+
+      - name: Authenticate and reconcile all 50 stocks for the selected NSE session
+        shell: bash
+        run: |
+          set -o pipefail
+          cd source
+          python scripts/reconcile_nifty50_history.py \
+            --calendar data/calendars/nse_2026_through_2026-11-07.json \
+            --database "$RUNNER_TEMP/nifty50-auth-validation.sqlite" \
+            --universe-dir "$RUNNER_TEMP/nifty50-universe" \
+            --start-date "$VALIDATION_DATE" \
+            --through-date "$VALIDATION_DATE" \
+            --timeframes 1m 5m 15m \
+            --pace-seconds 1.0 \
+            --max-passes 2 | tee "$RUNNER_TEMP/nifty50-historical-report.json"
+
+      - name: Validate FULL quotes and live WebSocket when market is open
+        shell: bash
+        run: |
+          cd source
+          python - <<'PY'
+          import json
+          import threading
+          import time
+          from datetime import datetime
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          from ict_engine.stock_feed import AngelOneStockFeed
+          from ict_engine.stock_universe import download_nse_universe
+          from scripts.reconcile_nifty50_history import load_calendar
+
+          ist = ZoneInfo("Asia/Kolkata")
+          now = datetime.now(ist)
+          universe = download_nse_universe()
+          feed = AngelOneStockFeed.connect_from_env(universe, pace_seconds=1.0)
+
+          quotes = feed.fetch_full_quotes(max_age_seconds=90.0)
+          quote_summary = {
+              "returned_quotes": len(quotes.quotes),
+              "expected_quotes": 50,
+              "missing_symbols": list(quotes.missing_symbols),
+              "stale_symbols_count": len(quotes.stale_symbols),
+              "unfetched_tokens_count": len(quotes.unfetched_tokens),
+              "errors": list(quotes.errors),
+          }
+          if (len(quotes.quotes) != 50 or quotes.missing_symbols
+                  or quotes.unfetched_tokens or quotes.errors):
+              raise SystemExit("FULL quote integrity check failed; see sanitized summary")
+
+          calendar = load_calendar(Path("data/calendars/nse_2026_through_2026-11-07.json"))
+          session = calendar.session_for(now.date())
+          ws_status = "SKIPPED_MARKET_CLOSED"
+          ws_tick_count = 0
+          if session and session.open_at <= now < session.close_at:
+              tick_event = threading.Event()
+              opened_event = threading.Event()
+              ws_errors = []
+              ticks = []
+
+              def on_tick(tick):
+                  ticks.append(tick)
+                  tick_event.set()
+
+              def on_error(message):
+                  ws_errors.append(str(message)[:240])
+
+              feed.start_stream(on_tick, on_error=on_error,
+                                on_open=opened_event.set)
+              try:
+                  if not opened_event.wait(20):
+                      raise SystemExit("WebSocket did not complete subscription handshake")
+                  if not tick_event.wait(60):
+                      raise SystemExit("WebSocket connected but no valid NIFTY 50 tick arrived within 60 seconds")
+                  ws_tick_count = len(ticks)
+                  ws_status = "PASS"
+                  if ws_errors:
+                      quote_summary["websocket_warnings"] = ws_errors[:5]
+              finally:
+                  feed.stop_stream()
+
+          report = {
+              "checked_at_ist": now.isoformat(),
+              "universe_members": len(universe.constituents),
+              "angelone_resolved_instruments": len(feed.instruments),
+              "instrument_master_sha256": feed.master_sha256,
+              "full_quote": quote_summary,
+              "websocket": {"status": ws_status, "valid_ticks_received": ws_tick_count},
+              "credential_values_logged": False,
+          }
+          Path("nifty50-authenticated-report.json").write_text(
+              json.dumps(report, indent=2), encoding="utf-8")
+          print(json.dumps(report, indent=2))
+          PY
+
+      - name: Upload sanitized validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nifty50-authenticated-validation
+          path: |
+            ${{ runner.temp }}/nifty50-historical-report.json
+            source/nifty50-authenticated-report.json
+          if-no-files-found: warn
+          retention-days: 14
