@@ -62,7 +62,7 @@ def parse_nse_constituent_csv(raw_csv: str, *, captured_on: date | None = None) 
     if not raw_csv.strip():
         raise UniverseError("NSE constituent CSV is empty")
     try:
-        rows = list(csv.DictReader(io.StringIO(raw_csv.lstrip("\\ufeff"))))
+        rows = list(csv.DictReader(io.StringIO(raw_csv.lstrip("\ufeff"))))
     except csv.Error as exc:
         raise UniverseError(f"cannot parse NSE constituent CSV: {exc}") from None
     if not rows:
@@ -119,7 +119,7 @@ def save_universe_snapshot(snapshot: UniverseSnapshot, directory: str | Path) ->
         "source_sha256": snapshot.source_sha256,
         "constituents": [asdict(x) for x in snapshot.constituents],
     }
-    encoded = json.dumps(payload, indent=2, sort_keys=True) + "\\n"
+    encoded = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if path.exists():
         existing = json.loads(path.read_text(encoding="utf-8"))
         if existing.get("source_sha256") != snapshot.source_sha256 or existing.get("constituents") != payload["constituents"]:
