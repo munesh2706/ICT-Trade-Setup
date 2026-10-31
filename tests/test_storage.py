@@ -75,3 +75,23 @@ def test_acquired_snapshot_requires_audit_before_backtest_read(tmp_path):
         store.load_candles("NIFTY_SPOT", "1m", "snapshot-a")
     store.finalize_snapshot("snapshot-a", status="VERIFIED")
     assert len(store.load_candles("NIFTY_SPOT", "1m", "snapshot-a")) == 1
+
+def test_raw_provider_response_is_retained_and_idempotent(tmp_path):
+    store = CandleStore(tmp_path / "ict.sqlite")
+    store.create_snapshot("snapshot-a")
+    fetched = datetime(2026,1,1,10,0,tzinfo=timezone.utc)
+    request = {"exchange": "NSE", "symboltoken": "99926000", "interval": "ONE_MINUTE", "fromdate": "2026-01-01 09:15", "todate": "2026-01-01 09:30"}
+    payload = {"status": True, "data": [["2026-01-01T09:15:00+05:30", 100, 102, 99, 101, 0]]}
+    store.store_raw_batch("snapshot-a", 0, "NIFTY", "1m", fetched, request, payload)
+    store.store_raw_batch("snapshot-a", 0, "NIFTY", "1m", fetched, request, payload)
+    batches = store.load_raw_batches("snapshot-a")
+    assert len(batches) == 1
+    assert batches[0]["payload"] == payload
+    assert batches[0]["request"]["symboltoken"] == "99926000"
+
+
+def test_raw_batch_rejects_auth_fields(tmp_path):
+    store = CandleStore(tmp_path / "ict.sqlite")
+    store.create_snapshot("snapshot-a")
+    with pytest.raises(ValueError):
+        store.store_raw_batch("snapshot-a", 0, "NIFTY", "1m", datetime.now(timezone.utc), {"Authorization": "secret"}, {"status": True})
