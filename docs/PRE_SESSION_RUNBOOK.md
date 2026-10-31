@@ -13,7 +13,7 @@ Run from the repository root:
 
 ~~~powershell
 $env:ICT_HISTORY_START_DATE = "2026-01-01"
-python scripts\pre_session_gate.py --calendar data\calendars\nse_2026_through_2026-10-31.json --timeframes 1m 5m 15m 1h
+python scripts\pre_session_gate.py --calendar data\calendars\nse_2026_through_2026-11-07.json --timeframes 1m 5m 15m 1h
 ~~~
 
 The first run may require many Angel One historical requests. Later runs compare the full configured date range to the local database and request only missing ranges.
@@ -38,7 +38,7 @@ Do not start the scanner/dashboard when the exit code is non-zero. Do not modify
 If 1d is added to --timeframes, explicitly provide the provider timestamp convention only after confirming it from actual Angel One responses:
 
 ~~~powershell
-python scripts\pre_session_gate.py --calendar data\calendars\nse_2026_through_2026-10-31.json --history-start 2026-01-01 --timeframes 1d --daily-anchor session_open
+python scripts\pre_session_gate.py --calendar data\calendars\nse_2026_through_2026-11-07.json --history-start 2026-01-01 --timeframes 1d --daily-anchor session_open
 ~~~
 
 Use local_midnight instead only if verified against the provider's actual daily response timestamps. The software intentionally refuses to guess.
