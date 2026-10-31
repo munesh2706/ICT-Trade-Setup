@@ -160,12 +160,15 @@ def test_global_single_position_cap_blocks_second_simultaneous_fill(tmp_path):
     candles, journal, engine = make_engine(tmp_path)
     first = signal()
     second = replace(signal(), signal_id="signal-second")
-    scan = StockScanReport(date(2026,10,30), datetime(2026,10,30,10,2,tzinfo=IST),
-                           "universe-1", 50, 50, (first, second), ())
+    initial = StockScanReport(date(2026,10,30), datetime(2026,10,30,10,0,tzinfo=IST),
+                               "universe-1", 50, 50, (first, second), ())
+    engine.process_scan_report(initial, candles=candles, journal=journal)
     add_verified_candles(candles, "bars-two-candidates", [
         candle(0,100.5,100.7,100.3,100.4),
         candle(1,100.5,100.7,100.3,100.4),
     ])
+    scan = StockScanReport(date(2026,10,30), datetime(2026,10,30,10,2,tzinfo=IST),
+                           "universe-1", 50, 50, (first, second), ())
     result = engine.process_scan_report(scan, candles=candles, journal=journal)
     assert result.positions_opened == 1
     assert result.open_positions == 1
