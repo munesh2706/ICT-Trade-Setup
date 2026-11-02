@@ -136,9 +136,21 @@ def parse_candles(payload):
     return parsed
 
 
+def expected_session_timestamps(session_date, minutes):
+    """Expected bar-open timestamps for a regular 09:15-15:30 IST session."""
+    session_start = datetime.combine(session_date, dtime(9, 15), tzinfo=IST)
+    session_minutes = 6 * 60 + 15
+    return [session_start + timedelta(minutes=offset)
+            for offset in range(0, session_minutes, minutes)]
+
+
 def audit_candles(candles, minutes, session_date):
+    expected_times = expected_session_timestamps(session_date, minutes)
     if not candles:
-        return result("FAIL", reason="No candles returned", count=0)
+        return result("FAIL", reason="No candles returned", count=0,
+                      expected_full_session_bar_count=len(expected_times),
+                      missing_timestamps=[ts.isoformat() for ts in expected_times],
+                      missing_count=len(expected_times))
     times = [c["timestamp"] for c in candles]
     duplicates = len(times) - len(set(times))
     monotonic = all(a < b for a, b in zip(times, times[1:]))
@@ -159,15 +171,25 @@ def audit_candles(candles, minutes, session_date):
             outside.append(c["timestamp"].isoformat())
         if c["timestamp"] > datetime.now(IST) + timedelta(minutes=1):
             future.append(c["timestamp"].isoformat())
-    expected = int((15 * 60 + 30 - (9 * 60 + 15)) / minutes)
-    # Do not label missing bars as definitive until the exchange calendar/halts are checked.
-    return result("PASS" if not duplicates and monotonic and not invalid_ohlc and not outside and not future else "FAIL",
-                  count=len(candles), duplicates=duplicates, strictly_increasing=monotonic,
+
+    expected_set = set(expected_times)
+    actual_set = set(times)
+    missing = sorted(expected_set - actual_set)
+    unexpected = sorted(actual_set - expected_set)
+    hard_failure = bool(duplicates or not monotonic or invalid_ohlc or outside or future)
+    status = "FAIL" if hard_failure else ("WARN" if missing or unexpected else "PASS")
+    return result(status, count=len(candles), duplicates=duplicates,
+                  strictly_increasing=monotonic,
                   invalid_ohlc_or_volume=invalid_ohlc[:10], out_of_session=outside[:10],
                   future_timestamps=future[:10], first=times[0].isoformat(),
-                  last=times[-1].isoformat(), expected_full_session_bar_count=expected,
+                  last=times[-1].isoformat(),
+                  expected_full_session_bar_count=len(expected_times),
                   observed_bar_count=len(candles),
-                  note="Bar-count shortfall is a gap candidate, not proof of missing data until holidays, halts and session exceptions are excluded.")
+                  missing_count=len(missing),
+                  missing_timestamps=[ts.isoformat() for ts in missing],
+                  unexpected_count=len(unexpected),
+                  unexpected_timestamps=[ts.isoformat() for ts in unexpected],
+                  note="Missing scheduled timestamps are reported as gaps. Confirm the exchange calendar, special sessions and trading halts before treating them as feed defects; never synthesize replacement candles.")
 
 
 def aggregate_from_1m(candles, minutes):
@@ -191,10 +213,14 @@ def aggregate_from_1m(candles, minutes):
 
 def compare_aggregates(one_minute, provider, minutes):
     agg = aggregate_from_1m(one_minute, minutes)
+    complete = {ts: candle for ts, candle in agg.items() if candle["n"] == minutes}
+    incomplete = {ts: candle for ts, candle in agg.items() if candle["n"] != minutes}
     by_time = {c["timestamp"]: c for c in provider}
     compared = 0
     mismatches = []
-    for ts, a in agg.items():
+    missing_provider = sorted(set(complete) - set(by_time))
+    missing_1m = sorted(set(by_time) - set(complete))
+    for ts, a in complete.items():
         p = by_time.get(ts)
         if not p:
             continue
@@ -205,11 +231,23 @@ def compare_aggregates(one_minute, provider, minutes):
                 fields[k] = {"aggregated_1m": a[k], "provider": p[k]}
         if fields:
             mismatches.append({"timestamp": ts.isoformat(), "differences": fields})
-    return result("PASS" if compared and not mismatches else ("WARN" if compared else "FAIL"),
-                  matched_buckets=compared, aggregate_buckets=len(agg),
-                  provider_buckets=len(provider), mismatch_count=len(mismatches),
-                  examples=mismatches[:5],
-                  note="OHLC comparison only; volume may be unavailable or differently defined for index candles. Differences are reported, never overwritten.")
+    if mismatches or not compared:
+        status = "FAIL"
+    elif incomplete or missing_provider or missing_1m:
+        status = "WARN"
+    else:
+        status = "PASS"
+    return result(status, matched_buckets=compared,
+                  complete_aggregate_buckets=len(complete),
+                  incomplete_1m_buckets=len(incomplete),
+                  incomplete_1m_bucket_timestamps=[ts.isoformat() for ts in sorted(incomplete)],
+                  provider_buckets=len(provider),
+                  missing_provider_bucket_count=len(missing_provider),
+                  missing_provider_bucket_timestamps=[ts.isoformat() for ts in missing_provider],
+                  provider_without_complete_1m_count=len(missing_1m),
+                  provider_without_complete_1m_timestamps=[ts.isoformat() for ts in missing_1m],
+                  mismatch_count=len(mismatches), examples=mismatches[:5],
+                  note="Only complete 1m buckets are compared with provider OHLC. Missing/incomplete buckets are surfaced; volume is not compared. No candles are synthesized or overwritten.")
 
 
 def run_websocket(api, creds, instruments, seconds):
